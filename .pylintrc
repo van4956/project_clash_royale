@@ -1,0 +1,18 @@
+[MESSAGES CONTROL]
+disable = missing-function-docstring,
+        missing-module-docstring,
+        missing-class-docstring,
+        import-outside-toplevel,
+        attribute-defined-outside-init,
+        line-too-long,
+        invalid-str-returned,
+        no-member,
+        invalid-name,
+        unused-import,
+        import-error,
+        import-self,
+        not-callable,
+        wrong-import-position,
+        unknown-option-value,
+        bad-indentation,
+        broad-exception-caught
