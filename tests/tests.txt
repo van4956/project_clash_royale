@@ -1,0 +1,8 @@
+# Запустить все тесты в папке tests
+pytest tests/ -v
+
+# Запустить все тесты в файле test_iou_box
+pytest tests/test_iou_box.py -v
+
+# Запустить конкретный тест конкретного файла
+pytest tests/test_iou_box.py::test_identical_boxes -v
