@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from modules.iou_box import iou_box
+from modules.functions import iou_box
 
 
 # Фикстура с тестовыми данными
