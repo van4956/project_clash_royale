@@ -4,15 +4,12 @@ import math
 
 
 
-
-
-
 Box = Tuple[float, float, float, float]  # (x1, y1, x2, y2)
 
 def iou_box(
     box_a: Box,
     box_b: Box,
-    alpha: float = 1,     # значимость IoU в общем скоре
+    alpha: float = 1,     # значимость IoU в общем скоре (пока что 1, потом скорректирую)
     sigma: float = 0.9    # чувствительность к смещению центров
 ) -> float:
     """
@@ -95,6 +92,15 @@ def iou_box(
 
 
 
+def cnt_box_timer(timer_obj: List[List[List[int]]]) -> int:
+    '''
+    Подсчитывает количество box_timer (первый элемент timer_screen) в timer_obj.
+    Принимает объект timer_obj, состоящий из 6 timer_screen.
+    Возвращает число,количество box_timer.
+    '''
+    x = sum(1 for timer_screen in timer_obj if timer_screen[0])
+
+    return x
 
 
 
@@ -154,15 +160,12 @@ def group_class_name(rows: List[List[str]], threshold: int = 3) -> List[str]:
 
 
 
+def group_box_lvl():
+    pass
 
 
 
-def cnt_box_timer(timer_obj: List[List[List[int]]]) -> int:
-    '''
-    Подсчитывает количество box_timer (первый элемент timer_screen) в timer_obj.
-    Принимает объект timer_obj, состоящий из 6 timer_screen.
-    Возвращает число,количество box_timer.
-    '''
-    x = sum(1 for timer_screen in timer_obj if timer_screen[0])
+def boxtimer_to_boxzone():
+    pass
 
-    return x
+
