@@ -30,12 +30,13 @@ class Card():
     '''
     Класс для карт Clash Royale
     '''
-    name: str # название (реальное на анг)
+    card_id: int # уникальный id карты который мы получаем от модели
+    card_name: str # название карты (реальное на английском)
     image_path: str # ссылка на картинку в проекте
     elixir: int # стоимость карты (число элика)
     class_name: str | None  # class_name которые детектит модель
     spell: bool # является ли заклинанием (true/false)
-    spell_time: int | None # время заклинания (число сек)
+    spell_life_time: int | None # время исполнения заклинания (число сек)
     champion: bool # Champion (true/false)
     ability_class_name: str | None # абилка (class_name/none)
     ability_elixir: int # стоимость абалики (число элика/0)

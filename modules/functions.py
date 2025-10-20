@@ -160,12 +160,117 @@ def group_class_name(rows: List[List[str]], threshold: int = 3) -> List[str]:
 
 
 
-def group_box_lvl():
-    pass
+def boxtimer_to_boxzone(box_timer: Box) -> Box:
+    """
+    Преобразует координаты бокса таймера в расширенную зону отслеживания.
+
+    Логика расширения:
+    - Влево и вправо на 2 ширины бокса таймера
+    - Вниз от верхней границы на 2 высоты бокса таймера
+    - Нижняя граница остается на месте
+
+    Args:
+        box_timer: (x1, y1, x2, y2) координаты бокса таймера
+
+    Returns:
+        box_zone: (x1, y1, x2, y2) расширенная зона отслеживания
+
+    Пример:
+        box_timer = (100, 100, 120, 110)  # ширина=20, высота=10
+        box_zone = (60, 120, 160, 110)    # x1-40, y1+20, x2+40, y2
+    """
+    x1, y1, x2, y2 = box_timer
+
+    # Нормализация координат (на случай если x1>x2 или y1>y2)
+    x1, x2 = min(x1, x2), max(x1, x2)
+    y1, y2 = min(y1, y2), max(y1, y2)
+
+    # Вычисляем размеры бокса таймера
+    width = x2 - x1   # ширина (l)
+    height = y2 - y1  # высота (h)
+
+    # Создаем расширенную зону
+    zone_x1 = x1 - 2 * width   # влево на 2 ширины
+    zone_y1 = y1 + 2 * height  # вниз от верхней границы на 2 высоты
+    zone_x2 = x2 + 2 * width   # вправо на 2 ширины
+    zone_y2 = y2               # нижняя граница остается
+
+    # Проверка на отрицательные координаты (не должно выходить за границы экрана)
+    zone_x1 = max(0, zone_x1)
+    zone_y1 = max(0, zone_y1)
+
+    return (zone_x1, zone_y1, zone_x2, zone_y2)
 
 
 
-def boxtimer_to_boxzone():
-    pass
+def group_box_lvl(timer_obj: List[List], threshold: int = 3, iou_threshold: float = 0.7) -> int:
+    """
+    Группирует box_lvl из timer_obj по пересечению их координат (IoU).
 
+    Принимает timer_obj (список из 6 timer_screen).
+    Каждый timer_screen имеет структуру: [[box_timer], [box_zone], [[box_lvl], [box_lvl], ...], [class_name, ...]]
+    Извлекает все box_lvl (timer_screen[2]) из всех timer_screen.
+    Группирует боксы с IoU >= iou_threshold.
 
+    Args:
+        timer_obj: список из 6 timer_screen
+        threshold: минимальное количество боксов в группе для учета (по умолчанию 3)
+        iou_threshold: порог IoU для считания боксов одинаковыми (по умолчанию 0.7)
+
+    Returns:
+        int: количество групп, у которых размер >= threshold
+
+    Пример:
+        timer_obj = [
+            [[box_timer], [box_zone], [[100,200,120,220], [102,198,118,222]], [class_name]],
+            [[box_timer], [box_zone], [[101,201,119,221]], [class_name]],
+            ...
+        ]
+        # Первые два бокса похожи (IoU > 0.7) → группа размера 3
+        # Возвращает: 1 (одна группа с размером >= 3)
+    """
+
+    # 1) Собираем все box_lvl из всех timer_screen
+    all_boxes = []
+    for timer_screen in timer_obj:
+        # timer_screen[2] - это список box_lvl
+        if len(timer_screen) > 2 and timer_screen[2]:
+            box_lvl_list = timer_screen[2]
+            # Добавляем все боксы из этого timer_screen
+            all_boxes.extend(box_lvl_list)
+
+    # Если боксов нет - возвращаем 0
+    if not all_boxes:
+        return 0
+
+    # 2) Группировка боксов по IoU похожести
+    # Используем жадный алгоритм группировки
+    groups = []  # список групп, каждая группа - список боксов
+    used = [False] * len(all_boxes)  # отметки использованных боксов
+
+    for i, box_i in enumerate(all_boxes):
+        if used[i]:
+            continue
+
+        # Создаем новую группу с текущим боксом
+        current_group = [box_i]
+        used[i] = True
+
+        # Ищем все похожие боксы
+        for j, box_j in enumerate(all_boxes):
+            if used[j]:
+                continue
+
+            # Проверяем IoU между box_i и box_j
+            similarity = iou_box(box_i, box_j)
+
+            if similarity >= iou_threshold:
+                current_group.append(box_j)
+                used[j] = True
+
+        groups.append(current_group)
+
+    # 3) Считаем количество групп с размером >= threshold
+    valid_groups_count = sum(1 for group in groups if len(group) >= threshold)
+
+    return valid_groups_count

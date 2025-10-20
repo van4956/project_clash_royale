@@ -11,6 +11,7 @@ from config import (
     MODEL_PATH,  # Путь к обученной модели
     YOLO_CONFIDENCE,  # Порог уверенности для фильтрации детекций
     YOLO_IMG_SIZE,  # Размер изображения для YOLO
+    YOLO_IOU, # Минимальный порог IoU для фильтрации задвоенных детекций
     MSG_NO_MODEL,  # Сообщение об ошибке если модель не найдена
     SELECTION_COLOR,  # Цвет рамки при выборе области экрана (BGR формат для OpenCV)
     SELECTION_THICKNESS  # Толщина линии рамки при выборе области
@@ -79,9 +80,9 @@ class CardDetector:
         Returns:
             list: Список обнаруженных объектов, каждый объект - это словарь:
                   {
-                      'class_id': int,      # ID класса (номер карты)
-                      'class_name': str,    # Название карты
-                      'confidence': float,  # Уверенность детекции (0-1)
+                      'class_id': int,          # ID класса (номер карты)
+                      'class_name': str,        # Название карты
+                      'confidence': float,      # Уверенность детекции (0-1)
                       'bbox': [x1, y1, x2, y2]  # Координаты bounding box
                   }
                   Возвращает пустой список если ничего не обнаружено
@@ -101,10 +102,12 @@ class CardDetector:
             # verbose=False - отключаем вывод логов YOLO в консоль
             # imgsz - размер изображения для обработки (YOLO изменит размер автоматически)
             # conf - минимальный порог уверенности для детекций
+            # iou - минимальный порог IoU для фильтрации задвоенных детекций
             results = self.model.predict(
                 source=frame,
                 imgsz=YOLO_IMG_SIZE,
                 conf=YOLO_CONFIDENCE,
+                iou=YOLO_IOU,
                 verbose=False
             )
 
