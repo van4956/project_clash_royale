@@ -14,6 +14,42 @@ MODEL_PATH = os.path.join("models", "train_clash_royale_test5", "weights", "best
 ROI_CONFIG_PATH = "roi_config.txt"
 
 
+# ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ROI =====
+def get_roi_bounds():
+    """
+    Читает границы ROI из файла roi_config.txt.
+
+    Returns:
+        tuple: (x_min, y_min, x_max, y_max) - границы ROI области
+               или (0, 0, 1920, 1080) по умолчанию если файл не найден
+
+    Формат файла: "top,left,width,height"
+    Пример: "100,1120,960,1700"
+    """
+    try:
+        if os.path.exists(ROI_CONFIG_PATH):
+            with open(ROI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                coords = f.read().strip().split(',')
+                top = int(coords[0])      # y_min
+                left = int(coords[1])     # x_min
+                width = int(coords[2])
+                height = int(coords[3])
+
+                x_min = left
+                y_min = top
+                x_max = left + width
+                y_max = top + height
+
+                return (x_min, y_min, x_max, y_max)
+        else:
+            # Значения по умолчанию (полный экран Full HD)
+            return (0, 0, 1920, 1080)
+    except Exception as e:
+        print(f"Ошибка при чтении ROI: {e}")
+        # Возвращаем безопасные значения по умолчанию
+        return (0, 0, 1920, 1080)
+
+
 # ===== НАСТРОЙКИ ЗАХВАТА ЭКРАНА =====
 # Количество кадров в секунду для обработки
 # FPS = 0.25 → 1 кадр в 4 секунды (для тестирования)
