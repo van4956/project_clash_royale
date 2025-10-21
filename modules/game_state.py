@@ -1,26 +1,157 @@
-# 2.1. Создать modules/game_state.py
-# Глобальное состояние игры
-# Переменные:
-# log_screen (deque, maxlen=4) - последние 4 кадра
-# timer_list (list) - все timer_obj
-# ability_list (list) - все ability_obj
-# spell_dict_time (dict) - наши заклинания с таймаутом
-# spell_dict_list (dict) - отслеживание заклинаний в руке
-# card_manager (CardManager) - менеджер карт
-# elixir_balance (float) - эликсир противника
-# game_start_time (float) - время начала игры
-# Методы:
-# reset() - сброс состояния между боями, при отлове определенного класса от модели детекции (_finish)
-# add_frame(detections, timestamp) - добавить кадр в log_screen
-# update_elixir(timestamp) - обновить эликсир по времени
-# подсчет эликсира по формуле:
-# if detected_class == "_elixir_x2":
-#     elixir_rate = 2.0
-# elif detected_class == "_elixir_x3":
-#     elixir_rate = 3.0
-# time_screen = <hh:mm:ss> # время детекции
-# elixir_speed = 0.35 # количество элека за 1 секунда
-# elixir_spent = 0  # потраченный эликсир, получаем по атрибуту из класса сыгранной карты
-# elixir_rate = 1  # меняем в зависимости от полученного класса модели: _elixir_х2, _elixir_х3
-# delta_time = current_time - time_screen # время между текущей и прошлой итерацией, в идеале 0.250мс, но могут быть смещения
-# elixir_balance = max(0, min(10, elixir_balance (прошлый баланс) + delta_time * elixir_speed * elixir_rate - elixir_spent))
+"""
+Модуль для управления глобальным состоянием игры.
+Хранит все данные о текущем бою: кадры детекции, таймеры, заклинания, баланс эликсира.
+"""
+
+from collections import deque
+from typing import List, Dict, Optional
+from modules.card_manager import CardManager
+
+
+class GameState:
+    """
+    Менеджер глобального состояния игры.
+    Хранит все данные о текущем бою и предоставляет методы для их обновления.
+    """
+
+    # Константа скорости набора эликсира (эликсир/сек при x1)
+    ELIXIR_SPEED = 0.35
+
+    def __init__(self):
+        """Инициализация состояния игры."""
+        # Хранение кадров детекции
+        self.log_screen = deque(maxlen=4)  # последние 4 кадра с детекциями
+
+        # Хранение объектов
+        self.timer_list: List = []  # все активные TimerObject
+        self.ability_list: List = []  # все активные ability_obj
+
+        # Словари для заклинаний
+        self.spell_dict_time: Dict = {}  # заклинания с таймаутом {class_name: timeout_end}
+        self.spell_dict_list: Dict = {}  # отслеживание заклинаний в руке {class_name: count}
+
+        # Менеджер карт оппонента
+        self.card_manager = CardManager()
+
+        # Эликсир оппонента
+        self.elixir_balance: float = 5.0  # начальный баланс
+        self.elixir_rate: float = 1.0  # множитель скорости (1.0, 2.0, 3.0)
+        self.elixir_spent: float = 0.0  # эликсир потраченный в текущей итерации
+
+        # Метрики эликсира (для отладки/валидации)
+        self.elixir_negative: float = 0.0  # сумма эликсира ушедшего в минус
+        self.elixir_stagnation: float = 0.0  # простаиваемый эликсир выше 10
+
+        # Временные метки
+        self.game_start_time: Optional[float] = None  # время начала боя
+        self.time_screen: Optional[float] = None  # время последней обработки кадра
+
+    def reset(self):
+        """
+        Сброс состояния между боями.
+        Вызывается при обнаружении класса _finish от модели детекции.
+        """
+        self.log_screen.clear()
+        self.timer_list.clear()
+        self.ability_list.clear()
+        self.spell_dict_time.clear()
+        self.spell_dict_list.clear()
+        self.card_manager.reset()
+
+        self.elixir_balance = 5.0
+        self.elixir_rate = 1.0
+        self.elixir_spent = 0.0
+        self.elixir_negative = 0.0
+        self.elixir_stagnation = 0.0
+
+        self.game_start_time = None
+        self.time_screen = None
+
+    def add_frame(self, detections: List, timestamp: float):
+        """
+        Добавить кадр детекции в историю.
+
+        Args:
+            detections: список детекций с текущего кадра
+            timestamp: временная метка кадра
+        """
+        self.log_screen.append({
+            'detections': detections,
+            'timestamp': timestamp
+        })
+
+    def set_elixir_rate(self, class_name: str):
+        """
+        Установить множитель скорости набора эликсира.
+
+        Args:
+            class_name: класс детекции (_elixir_x2 или _elixir_x3)
+        """
+        if class_name == "_elixir_x2":
+            self.elixir_rate = 2.0
+        elif class_name == "_elixir_x3":
+            self.elixir_rate = 3.0
+        else:
+            self.elixir_rate = 1.0
+
+    def update_elixir(self, current_time: float, elixir_spent: float = 0.0):
+        """
+        Обновить баланс эликсира по времени и потраченному эликсиру.
+
+        Формула:
+        1. elixir_balance = min(10, prev_balance + delta_time * elixir_speed * elixir_rate - elixir_spent)
+        2. if elixir_balance < 0: elixir_negative += abs(elixir_balance); elixir_balance = 0
+        3. if elixir_balance > 10: elixir_stagnation += abs(elixir_balance); elixir_balance = 10
+
+        Args:
+            current_time: текущая временная метка
+            elixir_spent: эликсир потраченный на карты в текущей итерации
+        """
+        # Первая итерация - просто сохраняем время
+        if self.time_screen is None:
+            self.time_screen = current_time
+            return
+
+        # Вычисляем delta_time
+        delta_time = current_time - self.time_screen
+
+        # Вычисляем накопленный эликсир
+        gained_elixir = delta_time * self.ELIXIR_SPEED * self.elixir_rate
+
+        # Вычисляем новый баланс
+        self.elixir_balance = min(10.0, self.elixir_balance + gained_elixir - elixir_spent)
+
+        # Считаем простаиваемый баланс эликсира выше 10
+        if self.elixir_balance > 10.0:
+            self.elixir_stagnation += (self.elixir_balance - 10.0)
+            self.elixir_balance = 10.0
+
+        # Проверяем уход в negative
+        if self.elixir_balance < 0:
+            self.elixir_negative += abs(self.elixir_balance)
+            self.elixir_balance = 0.0
+
+        # Обновляем время последней обработки
+        self.time_screen = current_time
+
+    def get_elixir_metrics(self) -> Dict[str, float]:
+        """
+        Получить метрики эликсира для мониторинга.
+
+        Returns:
+            Словарь с метриками {balance, rate, negative, stagnation}
+        """
+        return {
+            'balance': self.elixir_balance,
+            'rate': self.elixir_rate,
+            'negative': self.elixir_negative,
+            'stagnation': self.elixir_stagnation
+        }
+
+    def __repr__(self) -> str:
+        """Строковое представление состояния."""
+        return (
+            f"GameState(elixir={self.elixir_balance:.2f}x{self.elixir_rate}, "
+            f"timers={len(self.timer_list)}, "
+            f"frames={len(self.log_screen)})"
+        )
