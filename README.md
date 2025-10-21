@@ -88,14 +88,14 @@ Clash Royale — это соревновательная мобильная иг
 
 ## Работа программы
 
-### Требования
+Требования
 
 - Python 3.8 или выше
 - Windows 10/11
 - Обученная модель YOLO11 в папке `models/`
 
 
-### Запуск
+Запуск
 
 ```bash
 python app.py
@@ -110,8 +110,6 @@ python app.py
 При следующих запусках программа автоматически загрузит сохраненные координаты.
 
 
-- **Ctrl+C** - принудительное завершение
-
 
 
 
@@ -119,23 +117,27 @@ python app.py
 
 ```
 project_13_ClashBot/
-├── data/                  # Картинки
-├── requirements.txt       # Зависимости Python
-├── config.py              # Конфигурация и настройки
-├── roi_config.txt         # Сохраненные координаты области
-├── app.py                 # Главный файл запуска
+├── data/                       # Картинки
+├── requirements.txt            # Зависимости Python
+├── config.py                   # Конфигурация и настройки
+├── roi_config.txt              # Сохраненные координаты области
+├── app.py                      # Главный файл запуска
 ├── modules/
 │   ├── __init__.py
-│   ├── all_card.py        # Классы всех карт
-│   ├── card_maneger.py    # Управление циклом карт
-│   ├── game_state.py      # Менеджер состояния игры
-│   ├── screen_capture.py  # Захват экрана
-|   ├── overlay_dynamic.py # Динамический overlay элементов
-|   ├── overlay_static.py  # Статичный overlay элементов
-│   └── detector.py        # Детекция объектов с помощью YOLO11
+│   ├── all_card.py             # Классы всех карт
+│   ├── card_maneger.py         # Управление циклом карт
+│   ├── game_state.py           # Менеджер состояния игры
+│   ├── timer_processor.py      # Обработка красных таймеров
+│   ├── spell_processor.py      # Обработка заклинаний
+│   ├── ability_processor.py    # Обработка абилок чемпионов
+│   ├── evolution_processor.py  # Обработка маркеров эволюций
+│   ├── screen_capture.py       # Захват экрана
+│   ├── detector.py             # Детекция объектов
+|   ├── overlay_dynamic.py      # Динамический overlay элементов
+│   └── overlay_static.py       # Статичный overlay элементов
 ├── tests/
-├── models/                # Модели YOLO
-└── README.md              # Документация
+├── models/                     # Модели YOLO
+└── README.md                   # Документация
 ```
 
 

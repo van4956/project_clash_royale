@@ -37,6 +37,7 @@ class Card():
     class_name: str | None  # class_name которые детектит модель
     spell: bool # является ли заклинанием (true/false)
     spell_life_time: int | None # время исполнения заклинания (число сек)
+    spell_my_hand_class_name: str | None # class_name которые детектит модель если это заклинание в НАШЕЙ руке
     champion: bool # Champion (true/false)
     ability_class_name: str | None # абилка (class_name/none)
     ability_elixir: int # стоимость абалики (число элика/0)
