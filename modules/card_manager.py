@@ -10,7 +10,7 @@
 
 import sys
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 import copy
 
 # Добавляем корневую папку проекта в sys.path
@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from modules.classes import Card
 from modules import all_card
+from modules.evolution_processor import find_oldest_detect_marker, mark_evolution_as_recorded
 
 
 class CardManager:
@@ -64,7 +65,7 @@ class CardManager:
         return copy.deepcopy(all_card.Card_random)
 
 
-    def play_new_card(self, class_name: str) -> bool:
+    def play_new_card(self, class_name: str, evolution_dict_timer: Dict[float, str] | None = None) -> bool:
         """
         Обрабатывает разыгрывание НОВОЙ (ранее неизвестной) карты противником.
 
@@ -74,9 +75,12 @@ class CardManager:
         3. Смещаем оставшиеся карты в await_cards вправо
         4. На первую позицию в await_cards ставим новую определенную карту
         5. Удаляем эту карту из deck_cards
+        6. Обрабатываем маркер эволюции (если есть)
+        7. Проверяем активацию эволюции и обнуляем счетчик
 
         Args:
             class_name: класс новой карты которую сыграл противник
+            evolution_dict_timer: словарь таймеров маркеров эволюции (опционально)
 
         Returns:
             bool: True если успешно, False если что-то пошло не так
@@ -115,15 +119,25 @@ class CardManager:
         # await_cards теперь имеет 3 элемента [0,1,2]
 
         # 4. На первую позицию в await_cards ставим новую карту
-        self.await_cards.insert(0, copy.deepcopy(found_card))
+        new_card = copy.deepcopy(found_card)
+        self.await_cards.insert(0, new_card)
 
         # 5. Удаляем карту из deck_cards
         self.deck_cards.discard(found_card)
 
+        # 6. Обрабатываем маркер эволюции (если есть)
+        if evolution_dict_timer is not None:
+            self._process_evolution_marker(new_card, evolution_dict_timer)
+
+        # 7. Проверяем активацию эволюции и обнуляем счетчик (если отыграна эво версия)
+        if new_card.evolution and new_card.cnt_evo >= new_card.target_evo:
+            # Отыгрывается эволюционная версия → обнуляем счетчик
+            new_card.cnt_evo = 0
+
         return True
 
 
-    def play_known_card(self, class_name: str) -> bool:
+    def play_known_card(self, class_name: str, evolution_dict_timer: Dict[float, str] | None = None) -> bool:
         """
         Обрабатывает разыгрывание ИЗВЕСТНОЙ карты из руки противника.
 
@@ -132,9 +146,12 @@ class CardManager:
         2. На освободившееся место ставим крайнюю правую карту из await_cards
         3. Смещаем оставшиеся карты в await_cards вправо
         4. На первую позицию в await_cards ставим карту которую удалили из hand_cards
+        5. Обрабатываем маркер эволюции (если есть)
+        6. Проверяем активацию эволюции и обнуляем счетчик
 
         Args:
             class_name: класс известной карты которую сыграл противник
+            evolution_dict_timer: словарь таймеров маркеров эволюции (опционально)
 
         Returns:
             bool: True если успешно, False если карты нет в руке
@@ -161,6 +178,15 @@ class CardManager:
 
         # 4. На первую позицию в await_cards ставим сыгранную карту
         self.await_cards.insert(0, played_card)
+
+        # 5. Обрабатываем маркер эволюции (если есть)
+        if evolution_dict_timer is not None:
+            self._process_evolution_marker(played_card, evolution_dict_timer)
+
+        # 6. Проверяем активацию эволюции и обнуляем счетчик (если отыграна эво версия)
+        if played_card.evolution and played_card.cnt_evo >= played_card.target_evo:
+            # Отыгрывается эволюционная версия → обнуляем счетчик
+            played_card.cnt_evo = 0
 
         return True
 
@@ -256,6 +282,43 @@ class CardManager:
             if card.name == "Card Random":
                 count += 1
         return count
+
+
+    def _process_evolution_marker(self, card: Card, evolution_dict_timer: Dict[float, str]) -> None:
+        """
+        Обрабатывает маркер эволюции для сыгранной карты.
+
+        Логика:
+        1. Проверяем два условия:
+           - Есть ли маркер со статусом "detect" в evolution_dict_timer?
+           - У карты evolution=True?
+        2. Если оба условия выполнены:
+           - Находим самый СТАРШИЙ (earliest) маркер со статусом "detect"
+           - Меняем его статус на "record"
+           - Увеличиваем счетчик карты cnt_evo += 1
+
+        Args:
+            card: Карта которая была сыграна (из await_cards[0])
+            evolution_dict_timer: Словарь таймеров маркеров эволюции
+
+        Примечание:
+            Эта функция вызывается из play_known_card() и play_new_card().
+            Обрабатывает связь между маркерами эволюции и счетчиком карты.
+        """
+        # Условие 1: У карты должна быть эволюция
+        if not card.evolution:
+            return
+
+        # Условие 2: Есть ли маркер со статусом "detect"?
+        oldest_timestamp = find_oldest_detect_marker(evolution_dict_timer)
+
+        if oldest_timestamp is not None:
+            # Найден маркер со статусом "detect"
+            # Меняем статус на "record"
+            mark_evolution_as_recorded(evolution_dict_timer, oldest_timestamp)
+
+            # Увеличиваем счетчик эволюции карты
+            card.cnt_evo += 1
 
 
     def reset(self):
