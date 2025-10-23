@@ -4,6 +4,7 @@
 """
 
 from typing import List, Tuple, Optional, Dict, Any
+from collections import deque
 from modules.classes import TimerObject, Card
 from modules.functions import iou_box, cnt_box_timer, group_box_lvl, group_class_name, boxtimer_to_boxzone
 from modules.card_manager import CardManager
@@ -31,7 +32,7 @@ def cleanup_timers(timer_list: List[TimerObject]) -> None:
 def create_timer_screen(
     box_timer: Box,
     all_detections: List[Dict[str, Any]],
-    log_screen: List[Dict[str, Any]]
+    log_screen: deque
 ) -> Tuple[List, List[str]]:
     """
     Создает timer_screen из обнаруженного красного таймера.
@@ -398,7 +399,8 @@ def check_timer_conditions(
 def process_confirmed_timer(
     confirmed_card: Card,
     card_manager: CardManager,
-    elixir_spent: List[float]
+    elixir_spent: List[float],
+    evolution_dict_timer: Dict[float, str] | None = None
 ) -> None:
     """
     Обрабатывает подтвержденный таймер - запускает смену цикла карт и списывает эликсир.
@@ -407,12 +409,14 @@ def process_confirmed_timer(
         confirmed_card: определенная карта противника
         card_manager: менеджер карт
         elixir_spent: список для накопления потраченного эликсира (mutable для изменения)
+        evolution_dict_timer: словарь таймеров маркеров эволюции (опционально)
 
     Логика:
         1. Проверяем где карта: в hand_cards или в deck_cards
         2. Запускаем соответствующий метод card_manager (play_known_card или play_new_card)
-        3. Добавляем стоимость карты в elixir_spent
-        4. (Анимация будет запускаться в overlay_dynamic.py - пока заглушка)
+        3. Передаем evolution_dict_timer для обработки эволюций
+        4. Добавляем стоимость карты в elixir_spent
+        5. (Анимация будет запускаться в overlay_dynamic.py - пока заглушка)
     """
     class_name = confirmed_card.class_name
 
@@ -423,10 +427,10 @@ def process_confirmed_timer(
     # Проверяем где карта
     if card_manager.is_card_in_hand(class_name):
         # Карта в руке → известная карта
-        card_manager.play_known_card(class_name)
+        card_manager.play_known_card(class_name, evolution_dict_timer)
     else:
         # Карта новая (из deck_cards)
-        card_manager.play_new_card(class_name)
+        card_manager.play_new_card(class_name, evolution_dict_timer)
 
     # Списываем эликсир
     elixir_spent[0] += confirmed_card.elixir
@@ -436,11 +440,12 @@ def process_confirmed_timer(
 
 
 def process_timer_detections(
-    log_screen: List[Dict[str, Any]],
+    log_screen: deque,
     timer_list: List[TimerObject],
     card_manager: CardManager,
     all_detections: List[Dict[str, Any]],
-    timestamp: float
+    timestamp: float,
+    evolution_dict_timer: Dict[float, str] | None = None
 ) -> float:
     """
     Главная функция обработки красных таймеров.
@@ -452,6 +457,7 @@ def process_timer_detections(
         card_manager: менеджер карт противника
         all_detections: все детекции текущего кадра
         timestamp: временная метка текущего кадра
+        evolution_dict_timer: словарь таймеров маркеров эволюции (опционально)
 
     Returns:
         float: суммарный потраченный эликсир в текущей итерации
@@ -516,7 +522,7 @@ def process_timer_detections(
 
         if confirmed_card:
             # Обрабатываем подтвержденный таймер
-            process_confirmed_timer(confirmed_card, card_manager, elixir_spent_total)
+            process_confirmed_timer(confirmed_card, card_manager, elixir_spent_total, evolution_dict_timer)
 
             # Помечаем timer_obj для удаления
             timers_to_remove.append(timer_obj)

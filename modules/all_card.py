@@ -6,6 +6,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from modules.classes import Card
 
+# Экспортируемые объекты
+__all__ = ['all_card']
+
 
 # Неизвестная карта
 Card_random = Card(
@@ -294,3 +297,19 @@ Card_miner = Card(
                         cnt_evo=0,
                         target_evo=0
                         )
+
+
+# Список всех карт (для поиска по class_name, атрибутам и т.д.)
+all_card = [
+    Card_random,
+    Card_boss_bandit,
+    Card_bomb_tower,
+    Card_giant_snowball,
+    Card_firecracker,
+    Card_rascals,
+    Card_dark_prince,
+    Card_hunter,
+    Card_bandit,
+    Card_lumberjack,
+    Card_miner,
+]

@@ -14,6 +14,9 @@ from modules.screen_capture import ScreenCapture  # Модуль захвата 
 from modules.detector import CardDetector  # Модуль детекции карт через YOLO
 from modules.overlay_static import StaticOverlay  # Статичные overlay элементы (доска, капелька)
 from modules.overlay_dynamic import DynamicOverlay  # Динамический overlay (шкала, цифра, карты)
+from modules.game_state import GameState  # Глобальное состояние игры
+from modules.detection_handler import process_detections  # Координатор обработки детекций
+from modules.all_card import all_card  # Список всех карт для поиска атрибутов
 
 # Импорт конфигурации
 from config import (
@@ -32,10 +35,7 @@ from config import (
     ELIXIR_DROP_SIZE_PERCENT,   # Размер капельки в % от ширины ROI
     ELIXIR_BAR_WIDTH_PERCENT,   # Ширина шкалы эликсира
     ELIXIR_BAR_HEIGHT_RATIO,    # Высота шкалы относительно капельки
-    ELIXIR_BAR_OFFSET_RATIO,    # Отступ шкалы от капельки
-    ELIXIR_START_BALANCE,       # Стартовый эликсир
-    ELIXIR_SPEED,               # Скорость накопления эликсира
-    ELIXIR_MAX                  # Максимум эликсира
+    ELIXIR_BAR_OFFSET_RATIO     # Отступ шкалы от капельки
 )
 
 
@@ -48,8 +48,14 @@ def main():
     2. Выбор области экрана (ROI)
     3. Создание статичного overlay (доска, капелька)
     4. Загрузка модели YOLO
-    5. Основной цикл: захват кадров → детекция → вывод результата в терминал и динамического overlay
-    6. Очистка ресурсов при завершении
+    5. Инициализация Game State
+    6. Основной цикл:
+        - Захват кадра
+        - Детекция YOLO
+        - Проверка технических классов (_ vs, _ timer total, _ finish)
+        - Обработка детекций через detection_handler
+        - Обновление overlay и вывод в терминал
+    7. Очистка ресурсов при завершении
     """
 
     print("=" * 60)
@@ -141,10 +147,11 @@ def main():
         bar_x = drop_x + drop_width + int(drop_height * ELIXIR_BAR_OFFSET_RATIO)
         bar_y = drop_y # + (drop_height - bar_height) // 2
 
-        # === СОЗДАЕМ ДИНАМИЧНЫЙ OVERLAY (шкала, цифра) ===
+        # === СОЗДАЕМ ДИНАМИЧНЫЙ OVERLAY (шкала, цифра, карты) ===
         overlay_dynamic = DynamicOverlay(
             bar_x, bar_y, bar_width, bar_height,
-            drop_x, drop_y, drop_width, drop_height
+            drop_x, drop_y, drop_width, drop_height,
+            board_y, board_height
         )
 
         if not overlay_dynamic.create_window():
@@ -167,7 +174,15 @@ def main():
     print("✓ Модель загружена")
     print()
 
-    # ===== ПОДГОТОВКА ПАПКИ ДЛЯ СОХРАНЕНИЯ КАДРОВ =====
+
+    # ===== ШАГ 5: ИНИЦИАЛИЗАЦИЯ GAME STATE =====
+    print("-> Инициализация Game State...")
+    game_state = GameState()
+    print("✓ Game State инициализирован")
+    print()
+
+
+    # ===== ПОДГОТОВКА ПАПКИ detection/ ДЛЯ СОХРАНЕНИЯ КАДРОВ =====
     if DETECTION_TEST:
         # Создаем папку для сохранения кадров если её нет
         if not os.path.exists(DETECTION_OUTPUT_DIR):
@@ -178,7 +193,7 @@ def main():
         print()
 
 
-    # ===== ШАГ 5: ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ =====
+    # ===== ШАГ 6: ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ =====
     print("=" * 60)
     print(MSG_STARTING_CAPTURE)
     print(f"Частота обработки: {FPS} кадров/сек")
@@ -192,9 +207,9 @@ def main():
     # Счетчик обработанных кадров
     frame_count = 0
 
-    # === ИНИЦИАЛИЗАЦИЯ ПОДСЧЕТА ЭЛИКСИРА ===
-    elixir_balance = ELIXIR_START_BALANCE  # Текущий запас эликсира
-    game_start_time = time.time()  # Время начала накопления эликсира
+    # Флаги инициализации игры
+    game_initialized = False  # Флаг инициализации колоды после _ vs
+    game_started = False      # Флаг начала игры после первого _ timer total
 
     try:
         # Бесконечный цикл обработки кадров
@@ -215,14 +230,80 @@ def main():
             detections = detector.detect(frame)
             time_after_detection = time.time()
 
-            # Вычисляем накопленный эликсир
-            game_time_total = time.time() - game_start_time
-            elixir_balance = ELIXIR_START_BALANCE + (game_time_total * ELIXIR_SPEED)
-            elixir_balance = min(elixir_balance, ELIXIR_MAX)
+            # Текущая временная метка (timestamp в секундах с начала эпохи)
+            current_time = time.time()
 
-            # Обновляем динамический overlay (шкала + цифра)
-            if overlay_dynamic:
-                overlay_dynamic.update_display(elixir_balance)
+            # --- ОБРАБОТКА ТЕХНИЧЕСКИХ КЛАССОВ ---
+
+            game_initialized = True # TODO: удалить после тестирования
+            game_started = True # TODO: удалить после тестирования
+            game_state.card_manager.reset() # TODO: удалить после тестирования
+            game_state.game_start_time = current_time # TODO: удалить после тестирования
+            game_state.time_screen = current_time # TODO: удалить после тестирования
+
+            # YOLO модель пока еще не научена детектить '_ vs'
+            # Проверка на начало боя (_ vs) - подготовка колоды
+            # if not game_initialized:
+            #     for det in detections:
+            #         if det['class_name'] == '_ vs':
+            #             print("\nОбнаружен _ vs - подготовка колоды противника")
+            #             game_state.card_manager.reset()
+            #             game_initialized = True
+            #             break
+
+            # Проверка на первый таймер (_ timer total) - старт игрового режима
+            # if game_initialized and not game_started:
+            #     for det in detections:
+            #         if det['class_name'] == '_timer_red':
+            #             print("Обнаружен первый _ timer total - старт игрового режима\n")
+            #             game_state.card_manager.reset() # TODO: удалить после тестирования
+            #             game_state.game_start_time = current_time
+            #             game_state.time_screen = current_time
+            #             game_started = True
+            #             break
+
+            # Проверка на конец боя (_ finish)
+            game_finished = False
+            for det in detections:
+                if det['class_name'] == '_ finish':
+                    game_finished = True
+                    break
+
+            # --- ОБРАБОТКА ДЕТЕКЦИЙ (если игра началась) ---
+            if game_started and not game_finished:
+                # Вызываем координатор обработки детекций
+                results = process_detections(
+                    all_detections=detections,
+                    current_time=current_time,
+                    game_state=game_state,
+                    all_cards=all_card
+                )
+
+                # Обновляем динамический overlay (шкала + цифра + карты)
+                if overlay_dynamic:
+                    # Обновляем эликсир
+                    overlay_dynamic.update_display(game_state.elixir_balance)
+
+                    # Обновляем карты (await и hand)
+                    await_cards = game_state.card_manager.get_await_cards()
+                    hand_cards = game_state.card_manager.get_hand_cards()
+                    overlay_dynamic.set_await_cards(await_cards)
+                    overlay_dynamic.set_hand_cards(hand_cards)
+
+            # --- ОБРАБОТКА КОНЦА ИГРЫ ---
+            if game_finished and game_started:
+                print("\n" + "=" * 60)
+                print("КОНЕЦ БОЯ - Обнаружен _ finish")
+                print("=" * 60)
+                print(f"Эликсир ушедший в минус: {game_state.elixir_negative:.2f}")
+                print(f"Простаиваемый эликсир:   {game_state.elixir_stagnation:.2f}")
+                print("=" * 60)
+                print()
+
+                # Сброс состояния игры
+                game_state.reset()
+                game_initialized = False
+                game_started = False
 
             # --- СОХРАНЕНИЕ КАДРА С ДЕТЕКЦИЯМИ (если включен режим отладки) ---
             if DETECTION_TEST:
@@ -258,12 +339,46 @@ def main():
                         class_name=det['class_name'],
                         confidence=det['confidence']
                     ))
-            else:
-                # Если ничего не обнаружено
-                print("  - (объекты не обнаружены)")
+            # else:
+            #     # Если ничего не обнаружено
+            #     print("  - (объекты не обнаружены)")
 
-            # Выводим текущий эликсир
-            print(f"  - Эликсир противника: {elixir_balance:.1f} / {ELIXIR_MAX}")
+            # --- ИНФОРМАЦИЯ О СОСТОЯНИИ ИГРЫ ---
+            if game_started and not game_finished:
+                # # Выводим текущий эликсир противника
+                # print(f"  💧 Эликсир противника: {game_state.elixir_balance:.1f} / 10.0")
+
+                # # Выводим информацию о потраченном эликсире (если было)
+                # if 'results' in locals() and results['total_elixir_spent'] > 0:
+                #     print(f"  💰 Потрачено в этом кадре: {results['total_elixir_spent']:.1f}")
+                #     if results['elixir_spent_timer'] > 0:
+                #         print(f"     └─ Таймеры: {results['elixir_spent_timer']:.1f}")
+                #     if results['elixir_spent_spell'] > 0:
+                #         print(f"     └─ Заклинания: {results['elixir_spent_spell']:.1f}")
+                #     if results['elixir_spent_ability'] > 0:
+                #         print(f"     └─ Абилки: {results['elixir_spent_ability']:.1f}")
+
+                # Выводим информацию о цикле карт
+                hand_cards = game_state.card_manager.get_hand_cards()
+                await_cards = game_state.card_manager.get_await_cards()
+
+                hand_names = [card.card_name if card.card_name else "???" for card in hand_cards]
+                await_names = [card.card_name if card.card_name else "???" for card in await_cards]
+
+                print(f"  ⏳ Ожидание: {', '.join(await_names)}")
+                print(f"  🃏 Рука:     {', '.join(hand_names)}")
+
+            elif not game_initialized:
+                print("  ->  Ожидание начала боя (_ vs)...")
+            elif not game_started:
+                print("  ->  Ожидание старта игры (_ timer total)...")
+
+            # --- ОБНОВЛЕНИЕ OVERLAY ОКОН ---
+            # Обновляем GUI overlay окон чтобы они оставались отзывчивыми (живыми)
+            if overlay_static:
+                overlay_static.update()
+            if overlay_dynamic:
+                overlay_dynamic.update()
 
             # --- КОНТРОЛЬ ЧАСТОТЫ КАДРОВ ---
             # Вычисляем время, затраченное на обработку
@@ -273,21 +388,16 @@ def main():
             frame_time = time_after_capture - start_time
             detection_time = time_after_detection - time_after_capture
 
-            print(f"Время захвата:               {frame_time:.2f} сек")
-            print(f"Время детекции:              {detection_time:.2f} сек")
+            print(f"Время захвата кадра:         {frame_time:.2f} сек")
+            print(f"Время детекции YOLO:         {detection_time:.2f} сек")
+            print("Время обработки детекций:     сек")
+            print("Время обновления overlay:     сек")
             if DETECTION_TEST:
                 save_time = time_after_save - time_after_detection
-                print(f"Время сохранения:            {save_time:.2f} сек")
-            print(f"Время всей обработки:        {total_time:.2f} сек")
+                print(f"Время сохранения скринов:     {save_time:.2f} сек")
+            print(f"Общее время обработки:       {total_time:.2f} сек")
 
             print()  # Пустая строка для разделения
-
-            # --- ОБНОВЛЕНИЕ OVERLAY ОКОН ---
-            # Обновляем GUI overlay окон чтобы они оставались отзывчивыми (живыми)
-            if overlay_static:
-                overlay_static.update()
-            if overlay_dynamic:
-                overlay_dynamic.update()
 
             # Вычисляем время ожидания до следующего кадра
             sleep_time = frame_interval - total_time
@@ -297,20 +407,14 @@ def main():
                 time.sleep(sleep_time)
 
     except KeyboardInterrupt:
-        # Обработка прерывания программы (Ctrl+C)
         print()
         print("Программа прервана пользователем (Ctrl+C)")
 
     except Exception as e:
-        # Обработка непредвиденных ошибок
         print()
         print(f"КРИТИЧЕСКАЯ ОШИБКА: {e}")
 
     finally:
-        # ===== ШАГ 5: ОЧИСТКА РЕСУРСОВ =====
-        # Блок finally выполнится в любом случае (нормальное завершение или ошибка)
-        print()
-        print("Очистка ресурсов.")
 
         # Закрываем overlay окна (в обратном порядке создания)
         if overlay_dynamic:

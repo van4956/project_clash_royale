@@ -131,11 +131,13 @@ project_13_ClashBot/
 │   ├── spell_processor.py      # Обработка заклинаний
 │   ├── ability_processor.py    # Обработка абилок чемпионов
 │   ├── evolution_processor.py  # Обработка маркеров эволюций
+│   ├── detection_handler.py    # Координатор всех обработчиков
 │   ├── screen_capture.py       # Захват экрана
 │   ├── detector.py             # Детекция объектов
 |   ├── overlay_dynamic.py      # Динамический overlay элементов
 │   └── overlay_static.py       # Статичный overlay элементов
-├── tests/
+├── tests/                      # QA
+├── detection/                  # Обработанные кадры
 ├── models/                     # Модели YOLO
 └── README.md                   # Документация
 ```

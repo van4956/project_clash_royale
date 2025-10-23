@@ -37,8 +37,8 @@ class CardManager:
         Создает deck_cards со всеми 121 картами.
         Заполняет await_cards и hand_cards карточками-заглушками card_random.
         """
-        # Собираем все карты из total_card.py в множество (кроме Card_random)
-        self.deck_cards = set()
+        # Собираем все карты из total_card.py в список (кроме Card_random)
+        self.deck_cards = []
 
         # Получаем все атрибуты из модуля total_card
         for attr_name in dir(all_card):
@@ -48,7 +48,7 @@ class CardManager:
                 # Проверяем что это экземпляр класса Card
                 if isinstance(card, Card):
                     # Создаем глубокую копию карты
-                    self.deck_cards.add(copy.deepcopy(card))
+                    self.deck_cards.append(copy.deepcopy(card))
 
         # Инициализируем await_cards и hand_cards заглушками
         self.await_cards = [self.card_random() for _ in range(4)]
@@ -123,7 +123,8 @@ class CardManager:
         self.await_cards.insert(0, new_card)
 
         # 5. Удаляем карту из deck_cards
-        self.deck_cards.discard(found_card)
+        if found_card in self.deck_cards:
+            self.deck_cards.remove(found_card)
 
         # 6. Обрабатываем маркер эволюции (если есть)
         if evolution_dict_timer is not None:

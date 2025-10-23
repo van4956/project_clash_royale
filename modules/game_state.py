@@ -24,11 +24,17 @@ class GameState:
 
         # Хранение объектов
         self.timer_list: List = []  # все активные TimerObject
-        self.ability_list: List = []  # все активные ability_obj
 
         # Словари для заклинаний
-        self.spell_dict_time: Dict = {}  # заклинания с таймаутом {class_name: timeout_end}
-        self.spell_dict_list: Dict = {}  # отслеживание заклинаний в руке {class_name: count}
+        self.spell_dict_hand: Dict[str, List[int]] = {}  # НАША рука: {"ZE_rage": [1,0,0,0]}
+        self.spell_dict_our: Dict[str, List[float]] = {}  # НАШИ активные: {"SE_rage": [timeout_1, timeout_2]}
+        self.spell_dict_enemy: Dict[str, List[float]] = {}  # ВРАЖЕСКИЕ активные: {"SE_rage": [timeout_1]}
+
+        # Словарь для абилок чемпионов
+        self.ability_dict_enemy: Dict[str, float] = {}  # ВРАЖЕСКИЕ активные абилки: {"AC_xxx": timeout_end}
+
+        # Словарь для маркеров эволюции
+        self.evolution_dict_timer: Dict[float, str] = {}  # Маркеры эво: {timestamp: "detect"/"record"}
 
         # Менеджер карт оппонента
         self.card_manager = CardManager()
@@ -53,9 +59,11 @@ class GameState:
         """
         self.log_screen.clear()
         self.timer_list.clear()
-        self.ability_list.clear()
-        self.spell_dict_time.clear()
-        self.spell_dict_list.clear()
+        self.spell_dict_hand.clear()
+        self.spell_dict_our.clear()
+        self.spell_dict_enemy.clear()
+        self.ability_dict_enemy.clear()
+        self.evolution_dict_timer.clear()
         self.card_manager.reset()
 
         self.elixir_balance = 5.0
