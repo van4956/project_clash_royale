@@ -263,8 +263,8 @@ class DynamicOverlay:
         c1_y = (left_bottom_y + board_bottom) / 2
 
         # C2: центр правого перпендикуляра
-        c2_x = right_bottom_x
-        c2_y = (right_bottom_y + board_bottom) / 2
+        # c2_x = right_bottom_x
+        # c2_y = (right_bottom_y + board_bottom) / 2
 
         # Делим отрезок C1-C2 на 8 равных частей (9 точек)
         step = bar_width / 8

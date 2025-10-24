@@ -6,7 +6,9 @@
 Платформа: Windows 11 only
 """
 
+import os
 import logging
+import ctypes  # Windows API для click-through окна
 
 # Настраиваем логгер модуля
 logger = logging.getLogger(__name__)
@@ -15,8 +17,7 @@ logger.info("Загружен модуль: %s", __name__)
 
 import tkinter as tk
 from PIL import Image, ImageTk
-import ctypes  # Windows API для click-through окна
-import os
+
 
 class StaticOverlay:
     """
@@ -226,16 +227,15 @@ class StaticOverlay:
             try:
                 self.board_root.update()  # обновляем окно чтобы оно оставалось отзывчивым
             except tk.TclError as e:  # если окно было закрыто
-                logger.warning("Ошибка при обновлении окна доски: %s", e)
-                pass
+                logger.error("Ошибка при обновлении окна доски: %s", e)
 
         # Обновляем окно капельки
         if self.drop_root:
             try:
                 self.drop_root.update()  # обновляем окно чтобы оно оставалось отзывчивым
             except tk.TclError as e:  # если окно было закрыто
-                logger.warning("Ошибка при обновлении окна капельки: %s", e)
-                pass
+                logger.error("Ошибка при обновлении окна капельки: %s", e)
+
 
     def close(self):
         """Закрытие обоих окон"""
