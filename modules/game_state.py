@@ -3,19 +3,28 @@
 Хранит все данные о текущем бою: кадры детекции, таймеры, заклинания, баланс эликсира.
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 from collections import deque
 from typing import List, Dict, Optional
 from modules.card_manager import CardManager
 
+# Импорт конфигурации
+from config import (
+    ELIXIR_SPEED, # базовая скорость прироста эликсира
+    ELIXIR_START_BALANCE, # начальный баланс эликсира
+)
 
 class GameState:
     """
     Менеджер глобального состояния игры.
     Хранит все данные о текущем бою и предоставляет методы для их обновления.
     """
-
-    # Константа скорости набора эликсира (эликсир/сек при x1)
-    ELIXIR_SPEED = 0.35
 
     def __init__(self):
         """Инициализация состояния игры."""
@@ -40,8 +49,9 @@ class GameState:
         self.card_manager = CardManager()
 
         # Эликсир оппонента
-        self.elixir_balance: float = 5.0  # начальный баланс
-        self.elixir_rate: float = 1.0  # множитель скорости (1.0, 2.0, 3.0)
+        self.elixir_speed = ELIXIR_SPEED # базовая скорость прироста эликсира
+        self.elixir_balance: float = ELIXIR_START_BALANCE  # начальный баланс
+        self.elixir_rate: float = 1.0  # коэффициент прироста эликсира
         self.elixir_spent: float = 0.0  # эликсир потраченный в текущей итерации
 
         # Метрики эликсира (для отладки/валидации)
@@ -66,7 +76,7 @@ class GameState:
         self.evolution_dict_timer.clear()
         self.card_manager.reset()
 
-        self.elixir_balance = 5.0
+        self.elixir_balance = ELIXIR_START_BALANCE
         self.elixir_rate = 1.0
         self.elixir_spent = 0.0
         self.elixir_negative = 0.0
@@ -95,9 +105,9 @@ class GameState:
         Args:
             class_name: класс детекции (_elixir_x2 или _elixir_x3)
         """
-        if class_name == "_elixir_x2":
+        if class_name == "_ elixir x2":
             self.elixir_rate = 2.0
-        elif class_name == "_elixir_x3":
+        elif class_name == "_ elixir x3":
             self.elixir_rate = 3.0
         else:
             self.elixir_rate = 1.0
@@ -124,12 +134,12 @@ class GameState:
         delta_time = current_time - self.time_screen
 
         # Вычисляем накопленный эликсир
-        gained_elixir = delta_time * self.ELIXIR_SPEED * self.elixir_rate
+        add_elixir = delta_time * self.elixir_speed * self.elixir_rate
 
         # Вычисляем новый баланс
-        self.elixir_balance = min(10.0, self.elixir_balance + gained_elixir - elixir_spent)
+        self.elixir_balance = self.elixir_balance + add_elixir - elixir_spent
 
-        # Считаем простаиваемый баланс эликсира выше 10
+        # Считаем простаиваемый баланс эликсира, который превышает 10
         if self.elixir_balance > 10.0:
             self.elixir_stagnation += (self.elixir_balance - 10.0)
             self.elixir_balance = 10.0
@@ -138,6 +148,7 @@ class GameState:
         if self.elixir_balance < 0:
             self.elixir_negative += abs(self.elixir_balance)
             self.elixir_balance = 0.0
+            logger.info("Эликсир ушел в минус")
 
         # Обновляем время последней обработки
         self.time_screen = current_time

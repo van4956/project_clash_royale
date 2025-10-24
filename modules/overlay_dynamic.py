@@ -4,6 +4,7 @@
 Элементы обновляются каждый кадр (шкала эликсира, цифры, карты)
 """
 
+import os
 import logging
 
 # Настраиваем логгер модуля
@@ -14,7 +15,6 @@ logger.info("Загружен модуль: %s", __name__)
 import tkinter as tk
 import ctypes  # Windows API для click-through окна
 from PIL import Image, ImageTk
-import os
 from config import CARD_SCALE
 
 
@@ -23,8 +23,10 @@ class DynamicOverlay:
     Класс для создания динамических overlay элементов
 
     Элементы:
-    - Горизонтальная шкала эликсира (0-10)
-    - Цифра текущего эликсира поверх капельки
+    - Цифра текущего эликсира поверх капельки (0-10)
+    - Горизонтальная шкала эликсира
+    - Карты ожидания (слева, ниже шкалы)
+    - Карты в руке (справа, ниже шкалы)
     """
 
     def __init__(self, x, y, width, height, drop_x, drop_y, drop_width, drop_height, board_y, board_height):
@@ -32,20 +34,20 @@ class DynamicOverlay:
         Инициализация динамического overlay
 
         Args:
-            x (int): X координата шкалы
-            y (int): Y координата шкалы
-            width (int): Ширина шкалы
-            height (int): Высота шкалы
-            drop_x (int): X координата капельки (для цифры)
-            drop_y (int): Y координата капельки (для цифры)
+            x (int): X координата шкалы, равна X координата центра капельки + ширина капельки + отступ от капельки в % от высоты капельки
+            y (int): Y координата шкалы, равна Y координата центра капельки
+            width (int): Ширина шкалы равна в % от ширины ROI
+            height (int): Высота шкалы равна в % от высоты капельки
+            drop_x (int): X координата центра капельки (для цифры)
+            drop_y (int): Y координата центра капельки (для цифры)
             drop_width (int): Ширина капельки
             drop_height (int): Высота капельки
             board_y (int): Y координата доски (для расчета позиций карт)
             board_height (int): Высота доски (для расчета позиций карт)
         """
         # Параметры шкалы
-        self.x = x
-        self.y = y
+        self.bar_x = x
+        self.bar_y = y
         self.width = width
         self.height = height
 
@@ -89,8 +91,8 @@ class DynamicOverlay:
         try:
             # Создаем окно для шкалы и цифры
             # Нужно охватить область от капельки до конца шкалы
-            total_width = (self.x + self.width) - self.drop_x
-            total_height = max(self.drop_height, self.height + (self.y - self.drop_y))
+            total_width = (self.bar_x + self.width) - self.drop_x + 50
+            total_height = max(self.drop_height, self.height + (self.bar_y - self.drop_y)) + 100
 
             self.root = tk.Tk()
             self.root.title("Clash Royale Bot - Dynamic")
@@ -147,8 +149,7 @@ class DynamicOverlay:
             logger.warning("Canvas не найден! Пропускаем обновление шкалы и цифры ...")
             return
 
-        # Ограничиваем 0-10
-        elixir_amount = max(0, min(10, elixir_amount))
+
         self.current_elixir = elixir_amount
 
         # Очищаем только элементы шкалы и цифры (НЕ трогаем карты!)
@@ -156,8 +157,8 @@ class DynamicOverlay:
         self.canvas.delete("elixir_digit")
 
         # Вычисляем локальные координаты (относительно окна)
-        bar_x = self.x - self.drop_x
-        bar_y = self.y - self.drop_y
+        bar_x = self.bar_x - self.drop_x
+        bar_y = self.bar_y - self.drop_y
 
         # === ОТРИСОВКА ШКАЛЫ ===
 
@@ -218,8 +219,8 @@ class DynamicOverlay:
             try:
                 self.root.update()
             except tk.TclError as e:
-                logger.warning("Ошибка при обновлении окна: %s", e)
-                pass
+                logger.error("Ошибка при обновлении окна: %s", e)
+
 
     def _calculate_card_positions(self):
         """
@@ -240,8 +241,8 @@ class DynamicOverlay:
                    hand_positions: [(x, y), ...] - 4 координаты для карт в руке
         """
         # Шкала (в абсолютных координатах экрана)
-        bar_x = self.x
-        bar_y = self.y
+        bar_x = self.bar_x
+        bar_y = self.bar_y
         bar_width = self.width
         bar_height = self.height
 
@@ -319,8 +320,7 @@ class DynamicOverlay:
             img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
             # Конвертируем в PhotoImage для tkinter
-            # ВАЖНО: указываем master=self.root для привязки к правильному окну
-            photo = ImageTk.PhotoImage(img, master=self.root)
+            photo = ImageTk.PhotoImage(img, master=self.root)  # master=self.root для привязки к правильному окну
 
             return photo
 
@@ -344,7 +344,7 @@ class DynamicOverlay:
             await_pos, hand_pos = self._calculate_card_positions()
             self.await_card_positions = await_pos
             self.hand_card_positions = hand_pos
-            logger.info("Координаты карт ожидания и руки рассчитаны")
+            logger.info("Координаты карт заново рассчитаны")
 
         # Удаляем старые изображения с canvas
         for card_id in self.await_card_ids:
@@ -385,6 +385,7 @@ class DynamicOverlay:
                     )
 
                     self.await_card_ids.append(card_id)
+
             except Exception as e:
                 logger.error("Ошибка отрисовки await карты %s (%s): %s", i, card.card_name, e)
 
@@ -396,7 +397,7 @@ class DynamicOverlay:
             cards_list: список из 4 объектов Card
         """
         if not self.canvas:
-            logger.warning("Canvas не найден! Пропускаем установку карт в руке ...")
+            logger.error("Canvas не найден! Пропускаем установку карт в руке ...")
             return
 
         # Рассчитываем координаты если еще не рассчитаны
@@ -410,7 +411,7 @@ class DynamicOverlay:
             try:
                 self.canvas.delete(card_id)
             except Exception as e:
-                logger.warning("Ошибка удаления изображения карты %s: %s", card_id, e)
+                logger.error("Ошибка удаления изображения карты %s: %s", card_id, e)
 
         self.hand_card_ids.clear()
         self.hand_card_images.clear()
@@ -443,6 +444,8 @@ class DynamicOverlay:
                     )
 
                     self.hand_card_ids.append(card_id)
+                    # logger.info("Орисовка hand карты %s (%s) на canvas", i, card.card_name)
+
             except Exception as e:
                 logger.error("Ошибка отрисовки hand карты %s (%s): %s", i, card.card_name, e)
 

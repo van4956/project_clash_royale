@@ -3,6 +3,12 @@
 Главная функция process_detections вызывается из главного цикла app.py.
 Координирует работу timer_processor, spell_processor, ability_processor, evolution_processor.
 """
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
 
 from typing import List, Dict, Any
 from modules.game_state import GameState
@@ -150,6 +156,6 @@ def _has_red_timers(all_detections: List[Dict[str, Any]]) -> bool:
     """
     for detection in all_detections:
         class_name = detection.get('class_name', '')
-        if class_name == '_timer_red':
+        if class_name == '_ timer red':
             return True
     return False

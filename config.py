@@ -69,7 +69,7 @@ YOLO_IOU = 0.85  # Минимальный порог IoU для фильтрац
 
 
 # ===== НАСТРОЙКИ ОТЛАДКИ/ТЕСТИРОВАНИЯ =====
-DETECTION_TEST = False  # True - сохранять кадры, False - не сохранять
+DETECTION_TEST = True  # True - сохранять кадры, False - не сохранять
 DETECTION_OUTPUT_DIR = "detection"  # Папка для сохранения обработанных кадров
 
 # Цвет рамки при выборе области экрана (BGR формат для OpenCV)
@@ -83,12 +83,12 @@ SELECTION_THICKNESS = 2
 
 MSG_STARTING_CAPTURE = "Запуск захвата экрана..."
 MSG_DETECTION_RESULT = "[{timestamp}] Обнаружено объектов: {count}"
-MSG_OBJECT_DETECTED = "  - {class_name} (conf: {confidence:.2f})"
+MSG_OBJECT_DETECTED = "(conf: {confidence:.2f}) - {class_name} "
 MSG_PRESS_Q_TO_QUIT = "Нажмите 'Ctrl+C' в терминале для остановки программы"
 
 
 # ===== НАСТРОЙКИ OVERLAY =====
-# Доска (фоновая панель)
+# Фоновая панель
 BOARD_WIDTH_PERCENT = 0.8  # ширина доски в % от ширины ROI
 BOARD_HEIGHT_PERCENT = 0.085  # высота доски в % от высоты ROI
 BOARD_COLOR = (240, 76, 76)  # цвет доски
@@ -108,5 +108,4 @@ CARD_SCALE = 0.2  # коэффициент масштабирования кар
 
 # Логика подсчета эликсира
 ELIXIR_START_BALANCE = 6.5  # стартовый запас эликсира
-ELIXIR_SPEED = 0.33  # скорость прироста (эликсир/сек)
-ELIXIR_MAX = 10  # максимальное количество эликсира
+ELIXIR_SPEED = 0.35  # скорость прироста (эликсир/сек)
