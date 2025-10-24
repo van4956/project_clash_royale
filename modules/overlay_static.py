@@ -6,6 +6,13 @@
 Платформа: Windows 11 only
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 import tkinter as tk
 from PIL import Image, ImageTk
 import ctypes  # Windows API для click-through окна
@@ -73,7 +80,7 @@ class StaticOverlay:
         """
         # Проверяем что файл с капелькой существует
         if not os.path.exists(self.drop_image_path):
-            print(f"ОШИБКА: Изображение капельки не найдено: {self.drop_image_path}")
+            logger.error("ОШИБКА: Изображение капельки не найдено: %s", self.drop_image_path)
             return False
 
         try:
@@ -124,7 +131,7 @@ class StaticOverlay:
             new_style = current_style | WS_EX_LAYERED | WS_EX_TRANSPARENT  # добавляем нужные флаги
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)  # применяем новый стиль
 
-            print("Окно доски создано")
+            logger.info("Окно доски создано")
 
             # ========================================
             # ЧАСТЬ 2: СОЗДАЕМ ОКНО ДЛЯ КАПЕЛЬКИ
@@ -188,7 +195,7 @@ class StaticOverlay:
             ctypes.windll.user32.SetWindowLongW(hwnd_drop, GWL_EXSTYLE, new_style)  # применяем
 
 
-            print("Окно капельки создано")
+            logger.info("Окно капельки создано")
 
             # Финальное обновление обоих окон
             self.board_root.update()
@@ -197,10 +204,10 @@ class StaticOverlay:
             return True
 
         except Exception as e:
-            print(f"ОШИБКА при создании статичного overlay: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
+            logger.error("ОШИБКА при создании статичного overlay: %s", e)
+            # import traceback
+            # traceback.print_exc()
+            # return False
 
     @property
     def width(self):
@@ -218,14 +225,16 @@ class StaticOverlay:
         if self.board_root:
             try:
                 self.board_root.update()  # обновляем окно чтобы оно оставалось отзывчивым
-            except tk.TclError:  # если окно было закрыто
+            except tk.TclError as e:  # если окно было закрыто
+                logger.warning("Ошибка при обновлении окна доски: %s", e)
                 pass
 
         # Обновляем окно капельки
         if self.drop_root:
             try:
                 self.drop_root.update()  # обновляем окно чтобы оно оставалось отзывчивым
-            except tk.TclError:  # если окно было закрыто
+            except tk.TclError as e:  # если окно было закрыто
+                logger.warning("Ошибка при обновлении окна капельки: %s", e)
                 pass
 
     def close(self):
@@ -234,9 +243,9 @@ class StaticOverlay:
         if self.drop_root:
             try:
                 self.drop_root.destroy()  # уничтожаем окно и освобождаем ресурсы
-                print("✓ Окно капельки закрыто")
+                logger.info("Окно капельки закрыто.")
             except Exception as e:
-                print(f"Предупреждение при закрытии капельки: {e}")
+                logger.warning("Предупреждение при закрытии капельки: %s", e)
             finally:
                 self.drop_root = None  # обнуляем ссылку
                 self.drop_canvas = None  # обнуляем ссылку
@@ -246,11 +255,11 @@ class StaticOverlay:
         if self.board_root:
             try:
                 self.board_root.destroy()  # уничтожаем окно и освобождаем ресурсы
-                print("✓ Окно доски закрыто")
+                logger.info("Окно доски закрыто.")
             except Exception as e:
-                print(f"Предупреждение при закрытии доски: {e}")
+                logger.warning("Предупреждение при закрытии доски: %s", e)
             finally:
                 self.board_root = None  # обнуляем ссылку
                 self.board_canvas = None  # обнуляем ссылку
 
-        print("Статичный overlay закрыт.")
+        logger.info("Статичный overlay закрыт.")

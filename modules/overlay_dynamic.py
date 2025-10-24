@@ -4,6 +4,13 @@
 Элементы обновляются каждый кадр (шкала эликсира, цифры, карты)
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 import tkinter as tk
 import ctypes  # Windows API для click-through окна
 from PIL import Image, ImageTk
@@ -117,7 +124,7 @@ class DynamicOverlay:
             )
             self.canvas.pack()
 
-            print("Динамический overlay создан")
+            logger.info("Динамический overlay создан")
 
             # Отрисовываем начальное состояние
             self.update_display(0)
@@ -126,7 +133,7 @@ class DynamicOverlay:
             return True
 
         except Exception as e:
-            print(f"ОШИБКА при создании динамического overlay: {e}")
+            logger.error("ОШИБКА при создании динамического overlay: %s", e)
             return False
 
     def update_display(self, elixir_amount):
@@ -137,6 +144,7 @@ class DynamicOverlay:
             elixir_amount (float): Текущее количество эликсира (0-10)
         """
         if not self.canvas:
+            logger.warning("Canvas не найден! Пропускаем обновление шкалы и цифры ...")
             return
 
         # Ограничиваем 0-10
@@ -209,7 +217,8 @@ class DynamicOverlay:
         if self.root:
             try:
                 self.root.update()
-            except tk.TclError:
+            except tk.TclError as e:
+                logger.warning("Ошибка при обновлении окна: %s", e)
                 pass
 
     def _calculate_card_positions(self):
@@ -295,6 +304,7 @@ class DynamicOverlay:
             # Проверяем существование файла
             if not os.path.exists(image_path):
                 # Если файл не найден, возвращаем None
+                logger.error("Файл изображения карты %s не найден: %s", card.card_name, image_path)
                 return None
 
             # Загружаем изображение
@@ -315,7 +325,7 @@ class DynamicOverlay:
             return photo
 
         except Exception as e:
-            print(f"Ошибка загрузки изображения карты {card.card_name}: {e}")
+            logger.error("Ошибка загрузки изображения карты %s: %s", card.card_name, e)
             return None
 
     def set_await_cards(self, cards_list):
@@ -326,6 +336,7 @@ class DynamicOverlay:
             cards_list: список из 4 объектов Card
         """
         if not self.canvas:
+            logger.warning("Canvas не найден! Пропускаем установку карт ожидания ...")
             return
 
         # Рассчитываем координаты если еще не рассчитаны
@@ -333,13 +344,15 @@ class DynamicOverlay:
             await_pos, hand_pos = self._calculate_card_positions()
             self.await_card_positions = await_pos
             self.hand_card_positions = hand_pos
+            logger.info("Координаты карт ожидания и руки рассчитаны")
 
         # Удаляем старые изображения с canvas
         for card_id in self.await_card_ids:
             try:
                 self.canvas.delete(card_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error("Ошибка удаления изображения карты %s: %s", card_id, e)
+
         self.await_card_ids.clear()
         self.await_card_images.clear()
 
@@ -373,7 +386,7 @@ class DynamicOverlay:
 
                     self.await_card_ids.append(card_id)
             except Exception as e:
-                print(f"Ошибка отрисовки await карты {i} ({card.card_name}): {e}")
+                logger.error("Ошибка отрисовки await карты %s (%s): %s", i, card.card_name, e)
 
     def set_hand_cards(self, cards_list):
         """
@@ -383,6 +396,7 @@ class DynamicOverlay:
             cards_list: список из 4 объектов Card
         """
         if not self.canvas:
+            logger.warning("Canvas не найден! Пропускаем установку карт в руке ...")
             return
 
         # Рассчитываем координаты если еще не рассчитаны
@@ -395,8 +409,9 @@ class DynamicOverlay:
         for card_id in self.hand_card_ids:
             try:
                 self.canvas.delete(card_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Ошибка удаления изображения карты %s: %s", card_id, e)
+
         self.hand_card_ids.clear()
         self.hand_card_images.clear()
 
@@ -429,16 +444,16 @@ class DynamicOverlay:
 
                     self.hand_card_ids.append(card_id)
             except Exception as e:
-                print(f"Ошибка отрисовки hand карты {i} ({card.card_name}): {e}")
+                logger.error("Ошибка отрисовки hand карты %s (%s): %s", i, card.card_name, e)
 
     def close(self):
         """Закрытие окна"""
         if self.root:
             try:
                 self.root.destroy()
-                print("Динамический overlay закрыт.")
+                logger.info("Динамический overlay закрыт.")
             except Exception as e:
-                print(f"Предупреждение при закрытии: {e}")
+                logger.warning("Предупреждение при закрытии: %s", e)
             finally:
                 self.root = None
                 self.canvas = None

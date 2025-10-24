@@ -8,6 +8,13 @@
 - hand_cards: список из 4 карт в руке противника (справа на панели)
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 import sys
 from pathlib import Path
 from typing import Optional, List, Dict
@@ -94,7 +101,7 @@ class CardManager:
 
         # Проверяем что карта есть в deck_cards
         if found_card is None:
-            print(f"⚠ ОШИБКА: Карта {class_name} не найдена в deck_cards")
+            logger.error("⚠ ОШИБКА: Карта %s не найдена в deck_cards", class_name)
             return False
 
         # Ищем первый card_random в hand_cards (крайний левый)
@@ -105,7 +112,7 @@ class CardManager:
                 break
 
         if random_index is None:
-            print("⚠ ОШИБКА: Не найдено card_random в hand_cards для замены")
+            logger.error("⚠ ОШИБКА: Не найдено card_random в hand_cards для замены")
             return False
 
         # 1. Удаляем крайнюю левую card_random из hand_cards
@@ -165,7 +172,7 @@ class CardManager:
                 break
 
         if card_index is None:
-            print(f"⚠ ОШИБКА: Карта {class_name} не найдена в hand_cards")
+            logger.error("⚠ ОШИБКА: Карта %s не найдена в hand_cards", class_name)
             return False
 
         # 1. Удаляем карту из hand_cards
@@ -188,6 +195,7 @@ class CardManager:
         if played_card.evolution and played_card.cnt_evo >= played_card.target_evo:
             # Отыгрывается эволюционная версия → обнуляем счетчик
             played_card.cnt_evo = 0
+            logger.info("Эволюционная версия %s отыграна", played_card.name)
 
         return True
 

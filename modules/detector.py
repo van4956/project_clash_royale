@@ -4,15 +4,22 @@
 Отвечает за загрузку модели и обработку кадров
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 from ultralytics import YOLO  # type: ignore # Библиотека Ultralytics для работы с YOLO моделями
 import cv2  # OpenCV для работы с изображениями
 import os  # Для проверки существования файлов
+
 from config import (
     MODEL_PATH,  # Путь к обученной модели
     YOLO_CONFIDENCE,  # Порог уверенности для фильтрации детекций
     YOLO_IMG_SIZE,  # Размер изображения для YOLO
     YOLO_IOU, # Минимальный порог IoU для фильтрации задвоенных детекций
-    MSG_NO_MODEL,  # Сообщение об ошибке если модель не найдена
     SELECTION_COLOR,  # Цвет рамки при выборе области экрана (BGR формат для OpenCV)
     SELECTION_THICKNESS  # Толщина линии рамки при выборе области
 )
@@ -49,25 +56,23 @@ class CardDetector:
         """
         # Проверяем существование файла модели
         if not os.path.exists(self.model_path):
-            print(MSG_NO_MODEL.format(self.model_path))
+            logger.error("ОШИБКА: Модель не найдена по пути: %s", self.model_path)
             return False
 
         try:
             # Загружаем модель YOLO
-            print(f"Загрузка модели из: {self.model_path}")
             self.model = YOLO(self.model_path)
 
             # Получаем названия классов из модели
             # model.names - это словарь {0: "Giant", 1: "Arrows", ...}
             self.class_names = self.model.names
 
-            print(f"Модель успешно загружена. Количество классов: {len(self.class_names)}")
-            # print(f"Классы карт: {list(self.class_names.values())}")
+            logger.info("Количество классов: %s", len(self.class_names))
 
             return True
 
         except Exception as e:
-            print(f"ОШИБКА при загрузке модели: {e}")
+            logger.error("ОШИБКА при загрузке модели: %s", e)
             return False
 
     def detect(self, frame):
@@ -80,8 +85,8 @@ class CardDetector:
         Returns:
             list: Список обнаруженных объектов, каждый объект - это словарь:
                   {
-                      'class_id': int,          # ID класса (номер карты)
-                      'class_name': str,        # Название карты
+                      'class_id': int,          # ID класса
+                      'class_name': str,        # Название класса
                       'confidence': float,      # Уверенность детекции (0-1)
                       'bbox': [x1, y1, x2, y2]  # Координаты bounding box
                   }
@@ -89,12 +94,12 @@ class CardDetector:
         """
         # Проверяем что модель загружена
         if self.model is None or self.class_names is None:
-            print("ОШИБКА: Модель не загружена. Вызовите load_model() сначала.")
+            logger.error("ОШИБКА: Модель не загружена. Вызовите load_model() сначала.")
             return []
 
         # Проверяем что кадр не пустой
         if frame is None:
-            print("ОШИБКА: Получен пустой кадр")
+            logger.error("ОШИБКА: Получен пустой кадр")
             return []
 
         try:
@@ -152,7 +157,7 @@ class CardDetector:
             return detections
 
         except Exception as e:
-            print(f"ОШИБКА при детекции: {e}")
+            logger.error("ОШИБКА при детекции: %s", e)
             return []
 
     def draw_detections(self, frame, detections):

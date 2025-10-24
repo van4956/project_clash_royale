@@ -4,17 +4,21 @@
 Отвечает за выбор области экрана пользователем и последующий захват кадров
 """
 
+import logging
+import os  # Для работы с файловой системой
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 import cv2  # OpenCV - библиотека компьютерного зрения
 import numpy as np  # NumPy - для работы с массивами и изображениями
 import mss  # MSS - быстрая библиотека для захвата экрана (быстрее чем PIL)
-import os  # Для работы с файловой системой
 from config import (
     ROI_CONFIG_PATH,  # Путь к файлу с сохраненными координатами
     SELECTION_COLOR,  # Цвет рамки выделения
     SELECTION_THICKNESS,  # Толщина линии рамки
-    MSG_SELECT_AREA,  # Сообщение для пользователя
-    MSG_AREA_SAVED,  # Сообщение об успешном сохранении
-    MSG_AREA_LOADED  # Сообщение о загрузке координат
 )
 
 
@@ -105,7 +109,7 @@ class ScreenCapture:
         cv2.setMouseCallback(window_name, self.mouse_callback)
 
         # Выводим инструкцию для пользователя
-        print(MSG_SELECT_AREA)
+        logger.info("Выделите область игры мышью и нажмите Enter. ESC для отмены.")
 
         # Основной цикл выбора области
         while True:
@@ -151,7 +155,7 @@ class ScreenCapture:
 
             # ESC (27) - отмена выбора
             elif key == 27:  # ESC key
-                print("Выбор области отменен")
+                logger.info("Выбор области отменен")
                 cv2.destroyAllWindows()
                 return None
 
@@ -169,16 +173,9 @@ class ScreenCapture:
         """
         if self.roi:
             # Записываем координаты в файл в формате CSV (разделитель - запятая)
-            with open(ROI_CONFIG_PATH, 'w') as f:
+            with open(ROI_CONFIG_PATH, 'w', encoding='utf-8') as f:
                 f.write(f"{self.roi['top']},{self.roi['left']},{self.roi['width']},{self.roi['height']}")
 
-            # Выводим сообщение об успешном сохранении
-            print(MSG_AREA_SAVED.format(
-                self.roi['left'],
-                self.roi['top'],
-                self.roi['width'],
-                self.roi['height']
-            ))
 
     def load_roi(self):
         """
@@ -190,7 +187,7 @@ class ScreenCapture:
         # Проверяем существование файла с координатами
         if os.path.exists(ROI_CONFIG_PATH):
             # Читаем координаты из файла
-            with open(ROI_CONFIG_PATH, 'r') as f:
+            with open(ROI_CONFIG_PATH, 'r', encoding='utf-8') as f:
                 coords = f.read().strip().split(',')
 
                 # Парсим координаты и создаем словарь ROI
@@ -201,7 +198,7 @@ class ScreenCapture:
                     "height": int(coords[3])    # Высота
                 }
 
-            print(MSG_AREA_LOADED)
+            logger.info("Координаты области загружены из файла")
             return True
 
         return False
@@ -215,7 +212,7 @@ class ScreenCapture:
         """
         # Проверяем, что область выбрана
         if self.roi is None:
-            print("ОШИБКА: ROI не установлен. Сначала выберите область.")
+            logger.error("ОШИБКА: ROI не установлен. Сначала выберите область.")
             return None
 
         # Захватываем кадр из выбранной области
