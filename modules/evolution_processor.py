@@ -4,8 +4,15 @@
 Подсвечивают ТОЛЬКО вражеские эволюции (наши не подсвечиваются).
 """
 
-from typing import Dict, List, Any
+import os
+import logging
 
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
+from typing import Dict, List, Any
 
 # Константа: время отображения маркера эволюции на поле (в секундах)
 EVO_MARKER_DISPLAY_TIME = 3.0

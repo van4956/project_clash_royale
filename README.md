@@ -117,28 +117,29 @@ python app.py
 
 ```
 project_13_ClashBot/
-├── data/                       # Картинки
-├── requirements.txt            # Зависимости Python
-├── config.py                   # Конфигурация и настройки
-├── roi_config.txt              # Сохраненные координаты области
-├── app.py                      # Главный файл запуска
-├── modules/
+├── app.py                      # Главный файл, точка входа
+├── config.py                   # Конфигурация (константы, пути, настройки)
+├── modules/                    # Модули системы
 │   ├── __init__.py
-│   ├── all_card.py             # Классы всех карт
-│   ├── card_maneger.py         # Управление циклом карт
-│   ├── game_state.py           # Менеджер состояния игры
+│   ├── screen_capture.py       # Захват экрана (ROI selection, MSS)
+│   ├── yolo_detector.py        # YOLO детектор (инференс модели)
+│   ├── overlay_static.py       # Статичные элементы (доска, капелька)
+│   ├── overlay_dynamic.py      # Динамические элементы (шкала, карты)
+│   ├── game_state.py           # Глобальное состояние игры
+│   ├── card_manager.py         # Менеджер цикла карт
+│   ├── detection_handler.py    # Координатор обработки детекций
 │   ├── timer_processor.py      # Обработка красных таймеров
 │   ├── spell_processor.py      # Обработка заклинаний
 │   ├── ability_processor.py    # Обработка абилок чемпионов
-│   ├── evolution_processor.py  # Обработка маркеров эволюций
-│   ├── detection_handler.py    # Координатор всех обработчиков
-│   ├── screen_capture.py       # Захват экрана
-│   ├── detector.py             # Детекция объектов
-|   ├── overlay_dynamic.py      # Динамический overlay элементов
-│   └── overlay_static.py       # Статичный overlay элементов
-├── tests/                      # QA
-├── detection/                  # Обработанные кадры
-├── models/                     # Модели YOLO
+│   ├── evolution_processor.py  # Обработка эво-маркеров
+│   ├── classes.py              # Классы данных (Card, TimerObject)
+│   ├── functions.py            # Вспомогательные функции
+│   └── all_card.py             # База данных всех карт (121 шт)
+├── models/                     # Обученные YOLO модели
+├── data/                       # Ресурсы (картинки карт, иконки)
+├── detection/                  # Отладочные скриншоты с детекциями
+├── roi_config.txt              # Сохраненные координаты ROI
+├── requirements.txt            # Зависимости Python
 └── README.md                   # Документация
 ```
 

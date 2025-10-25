@@ -4,6 +4,13 @@
 Определение происходит по детекции эффекта заклинания на поле и сопоставлению с нашими заклинаниями.
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 from typing import Dict, List, Any, Optional
 from modules.classes import Card
 from modules.card_manager import CardManager

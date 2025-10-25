@@ -3,6 +3,13 @@
 Красные таймеры - основной сигнал размещения карт противника (юниты, здания).
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 from typing import List, Tuple, Optional, Dict, Any
 from collections import deque
 from modules.classes import TimerObject, Card
@@ -350,7 +357,7 @@ def check_timer_conditions(
     grouped_class_names = group_class_name(all_class_names, threshold=3)
 
     # Проверка на "_bomb" (бомбы игнорируем)
-    if "_bomb" in grouped_class_names:
+    if "_ bomb" in grouped_class_names:
         return None
 
     # Если усл.2 и усл.3 НЕ выполнены → пропускаем
@@ -482,7 +489,7 @@ def process_timer_detections(
     # 2. Обработка новых красных таймеров
     red_timers = []
     for detection in all_detections:
-        if detection.get('class_name') == '_timer_red':
+        if detection.get('class_name') == '_ timer red':
             box = detection.get('box')
             if box:
                 red_timers.append(box)

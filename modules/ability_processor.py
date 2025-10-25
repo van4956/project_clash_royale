@@ -4,6 +4,13 @@
 Определение владельца абилки по наличию красного уровня чемпиона в зоне над абилкой.
 """
 
+import logging
+
+# Настраиваем логгер модуля
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info("Загружен модуль: %s", __name__)
+
 from typing import Dict, List, Any, Optional, Tuple
 from modules.classes import Card
 

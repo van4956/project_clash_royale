@@ -18,7 +18,7 @@ import cv2  # OpenCV для сохранения изображений
 
 # Импорт наших модулей
 from modules.screen_capture import ScreenCapture  # Модуль захвата экрана
-from modules.detector import CardDetector  # Модуль детекции карт через YOLO
+from modules.yolo_detector import YoloDetector  # Модуль детекции карт через YOLO
 from modules.overlay_static import StaticOverlay  # Статичные overlay элементы (доска, капелька)
 from modules.overlay_dynamic import DynamicOverlay  # Динамический overlay (шкала, цифра, карты)
 from modules.game_state import GameState  # Глобальное состояние игры
@@ -75,7 +75,7 @@ def main():
     screen_capture = ScreenCapture()
 
     # Создаем объект детектора карт
-    detector = CardDetector()
+    detector = YoloDetector()
 
     logger.info("Модули инициализированы ✓ ")
 

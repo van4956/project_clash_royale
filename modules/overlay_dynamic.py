@@ -254,8 +254,8 @@ class DynamicOverlay:
         left_bottom_y = bar_y + bar_height
 
         # Правый нижний угол шкалы
-        right_bottom_x = bar_x + bar_width
-        right_bottom_y = bar_y + bar_height
+        # right_bottom_x = bar_x + bar_width
+        # right_bottom_y = bar_y + bar_height
 
         # Центры перпендикуляров (C1 и C2)
         # C1: центр левого перпендикуляра

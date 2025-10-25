@@ -4,6 +4,7 @@
 Отвечает за загрузку модели и обработку кадров
 """
 
+import os
 import logging
 
 # Настраиваем логгер модуля
@@ -13,7 +14,6 @@ logger.info("Загружен модуль: %s", __name__)
 
 from ultralytics import YOLO  # type: ignore # Библиотека Ultralytics для работы с YOLO моделями
 import cv2  # OpenCV для работы с изображениями
-import os  # Для проверки существования файлов
 
 from config import (
     MODEL_PATH,  # Путь к обученной модели
@@ -25,7 +25,7 @@ from config import (
 )
 
 
-class CardDetector:
+class YoloDetector:
     """
     Класс для детекции карт Clash Royale с помощью YOLO11
 
