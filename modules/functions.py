@@ -105,7 +105,7 @@ def cnt_box_timer(timer_obj: List[List[List[int]]]) -> int:
 
 
 
-def group_class_name(rows: List[List[str]], threshold: int = 3) -> List[str]:
+def group_class_name(rows: List[List[str]], threshold: int = 3) -> List[str]:  # TODO: по умолчанию 3 - правильно
     """
     Принимает список строк, состоящих из перечня class_name, и пороговое значение threshold.
 
@@ -217,7 +217,7 @@ def boxtimer_to_boxzone(box_timer: Box) -> Box:
 
 
 
-def group_box_lvl(timer_obj: List[List], threshold: int = 3, iou_threshold: float = 0.7) -> int:
+def group_box_lvl(timer_obj: List[List], threshold: int = 3, iou_threshold: float = 0.7) -> int:  # TODO: по умолчанию 3 - правильно
     """
     Группирует box_lvl из timer_obj по пересечению их координат (IoU).
 

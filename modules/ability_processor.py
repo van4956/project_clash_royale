@@ -102,9 +102,9 @@ def _find_red_level_in_zone(
     # Ищем красный уровень в детекциях
     for detection in all_detections:
         class_name = detection.get('class_name', '')
-        if class_name == '_lvl_red_cham':
+        if class_name == '_ lvl red cham':
             # Получаем бокс красного уровня
-            box_lvl = detection.get('box')  # (x1, y1, x2, y2)
+            box_lvl = detection.get('bbox')  # (x1, y1, x2, y2)
             if box_lvl and _is_box_in_zone(box_lvl, search_zone):
                 # Красный уровень найден в зоне!
                 return True
@@ -197,7 +197,7 @@ def process_ability_detections(
             continue
 
         # b) Ищем красный уровень в зоне над абилкой
-        box_ability = detection.get('box')  # (x1, y1, x2, y2)
+        box_ability = detection.get('bbox')  # (x1, y1, x2, y2)
         if not box_ability:
             continue
 

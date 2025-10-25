@@ -60,7 +60,7 @@ def create_timer_screen(
     Логика:
         1. Берем координаты box_timer
         2. Вычисляем box_zone (расширенная зона отслеживания)
-        3. Ищем все красные уровни (_lvl_red) в box_zone → box_lvl_list
+        3. Ищем все красные уровни (_ lvl red) в box_zone → box_lvl_list
         4. Ищем все class_name персонажей в box_zone → class_name_list
         5. Ищем все class_name в box_zone в log_screen (последние 4 кадра) → list_ignore
     """
@@ -75,8 +75,8 @@ def create_timer_screen(
     # 3. Ищем все красные уровни (_lvl_red) в box_zone
     box_lvl_list = []
     for detection in all_detections:
-        if detection.get('class_name') == '_lvl_red':
-            det_box = detection.get('box')
+        if detection.get('class_name') == '_ lvl red':
+            det_box = detection.get('bbox')
             if det_box and _is_box_in_zone(det_box, box_zone):
                 box_lvl_list.append(det_box)
 
@@ -86,7 +86,7 @@ def create_timer_screen(
         class_name = detection.get('class_name')
         # Исключаем служебные классы (начинающиеся с "_")
         if class_name and not class_name.startswith('_'):
-            det_box = detection.get('box')
+            det_box = detection.get('bbox')
             if det_box and _is_box_in_zone(det_box, box_zone):
                 class_name_list.append(class_name)
 
@@ -97,7 +97,7 @@ def create_timer_screen(
         for detection in frame_detections:
             class_name = detection.get('class_name')
             if class_name and not class_name.startswith('_'):
-                det_box = detection.get('box')
+                det_box = detection.get('bbox')
                 if det_box and _is_box_in_zone(det_box, box_zone):
                     if class_name not in list_ignore:
                         list_ignore.append(class_name)
@@ -274,8 +274,8 @@ def fill_missing_timer_screen(
     # Ищем красные уровни в box_zone
     box_lvl_list = []
     for detection in all_detections:
-        if detection.get('class_name') == '_lvl_red':
-            det_box = detection.get('box')
+        if detection.get('class_name') == '_ lvl red':
+            det_box = detection.get('bbox')
             if det_box and _is_box_in_zone(det_box, box_zone):
                 box_lvl_list.append(det_box)
 
@@ -284,7 +284,7 @@ def fill_missing_timer_screen(
     for detection in all_detections:
         class_name = detection.get('class_name')
         if class_name and not class_name.startswith('_'):
-            det_box = detection.get('box')
+            det_box = detection.get('bbox')
             if det_box and _is_box_in_zone(det_box, box_zone):
                 class_name_list.append(class_name)
 
@@ -345,7 +345,7 @@ def check_timer_conditions(
     # timer_count >= 3 → продолжаем проверку
 
     # Усл.2: Подсчет и группировка box_lvl
-    lvl_groups_count = group_box_lvl(timer_obj, threshold=3, iou_threshold=0.8)
+    lvl_groups_count = group_box_lvl(timer_obj, threshold=1, iou_threshold=0.8)  # TODO: вернуть threshold=3
 
     # Усл.3: Подсчет и группировка class_name
     # Извлекаем все class_name из timer_obj
@@ -354,7 +354,7 @@ def check_timer_conditions(
         if len(timer_screen) > 3 and timer_screen[3]:
             all_class_names.append(timer_screen[3])
 
-    grouped_class_names = group_class_name(all_class_names, threshold=3)
+    grouped_class_names = group_class_name(all_class_names, threshold=1)  # TODO: вернуть threshold=3
 
     # Проверка на "_bomb" (бомбы игнорируем)
     if "_ bomb" in grouped_class_names:
@@ -490,7 +490,7 @@ def process_timer_detections(
     red_timers = []
     for detection in all_detections:
         if detection.get('class_name') == '_ timer red':
-            box = detection.get('box')
+            box = detection.get('bbox')
             if box:
                 red_timers.append(box)
 
@@ -539,12 +539,12 @@ def process_timer_detections(
         timer_list.remove(timer_obj)
 
     # Удаляем timer_obj с timer_count == 0 (не видны 1.5 сек)
+    # Проверяем ВСЕ timer_obj независимо от количества элементов
     timers_to_remove_zero = []
     for timer_obj in timer_list:
-        if len(timer_obj) == 6:
-            timer_count = cnt_box_timer(timer_obj)
-            if timer_count == 0:
-                timers_to_remove_zero.append(timer_obj)
+        timer_count = cnt_box_timer(timer_obj)
+        if timer_count == 0:
+            timers_to_remove_zero.append(timer_obj)
 
     for timer_obj in timers_to_remove_zero:
         timer_list.remove(timer_obj)

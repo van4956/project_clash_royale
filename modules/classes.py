@@ -34,12 +34,13 @@ class Card():
     card_name: str # название карты (реальное на английском)
     image_path: str # ссылка на картинку в проекте
     elixir: int # стоимость карты (число элика)
-    class_name: str | None  # class_name которые детектит модель
+    class_name: str | None  # class_name которые детектит yolo модель
     spell: bool # является ли заклинанием (true/false)
     spell_life_time: int | None # время исполнения заклинания (число сек)
     spell_my_hand_class_name: str | None # class_name которые детектит модель если это заклинание в НАШЕЙ руке
     champion: bool # Champion (true/false)
     ability_class_name: str | None # абилка (class_name/none)
+    ability_life_time: int | None # время исполнения абилки (число сек)
     ability_elixir: int # стоимость абалики (число элика/0)
     evolution: bool # Evolution (true/false)
     evolution_image_path: str | None # ссылка на картинку ево карты

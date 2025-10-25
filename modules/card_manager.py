@@ -107,7 +107,7 @@ class CardManager:
         # Ищем первый card_random в hand_cards (крайний левый)
         random_index = None
         for i, hand_card in enumerate(self.hand_cards):
-            if hand_card.name == "Card Random":
+            if hand_card.card_name == "Card Random":
                 random_index = i
                 break
 
@@ -195,7 +195,7 @@ class CardManager:
         if played_card.evolution and played_card.cnt_evo >= played_card.target_evo:
             # Отыгрывается эволюционная версия → обнуляем счетчик
             played_card.cnt_evo = 0
-            logger.info("Эволюционная версия %s отыграна", played_card.name)
+            logger.info("Эволюционная версия %s отыграна", played_card.card_name)
 
         return True
 
@@ -288,7 +288,7 @@ class CardManager:
         """
         count = 0
         for card in self.hand_cards:
-            if card.name == "Card Random":
+            if card.card_name == "Card Random":
                 count += 1
         return count
 
@@ -343,8 +343,8 @@ class CardManager:
         """
         Строковое представление для отладки.
         """
-        hand_names = [c.name for c in self.hand_cards]
-        await_names = [c.name for c in self.await_cards]
+        hand_names = [c.card_name for c in self.hand_cards]
+        await_names = [c.card_name for c in self.await_cards]
         return (f"CardManager(\n"
                 f"  deck_size={len(self.deck_cards)},\n"
                 f"  await={await_names},\n"

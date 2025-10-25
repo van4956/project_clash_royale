@@ -86,8 +86,8 @@ def process_evolution_detections(
 
     for detection in all_detections:
         class_name = detection.get('class_name', '')
-        # Маркер эволюции: _evolution_mark
-        if class_name == '_evolution_mark':
+        # Маркер эволюции: _ evolution mark
+        if class_name == '_ evolution mark':
             detected_markers += 1
 
     # 3. Сравнение с известными маркерами

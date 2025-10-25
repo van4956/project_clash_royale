@@ -134,14 +134,14 @@ def _cleanup_all(game_state: GameState) -> None:
 
     Логика:
         - timer_list: удаление последнего элемента из каждого timer_obj
-        - spell_dict_hand: удаление последнего элемента из каждого списка
+        - spell_dict_hand: cleanup происходит внутри spell_processor.process_spell_detections()
         - Остальные словари (our/enemy) очищаются по таймаутам внутри своих процессоров
     """
     # Cleanup timer_list
     timer_processor.cleanup_timers(game_state.timer_list)
 
-    # Cleanup spell_dict_hand (скользящее окно)
-    spell_processor.cleanup_spell_dict_hand(game_state.spell_dict_hand)
+    # Cleanup spell_dict_hand (скользящее окно) - УДАЛЕНО, вызывается в spell_processor.process_spell_detections()
+    # spell_processor.cleanup_spell_dict_hand(game_state.spell_dict_hand)
 
 
 def _has_red_timers(all_detections: List[Dict[str, Any]]) -> bool:

@@ -24,6 +24,7 @@ from modules.overlay_dynamic import DynamicOverlay  # Динамический o
 from modules.game_state import GameState  # Глобальное состояние игры
 from modules.detection_handler import process_detections  # Координатор обработки детекций
 from modules.all_card import all_card  # Список всех карт для поиска атрибутов
+from modules.functions import cnt_box_timer  # Функция для подсчета количества таймеров
 
 # Импорт конфигурации
 from config import (
@@ -340,8 +341,11 @@ def main():
 
 
             # --- 6.6: ВЫВОД РЕЗУЛЬТАТОВ В ТЕРМИНАЛ ---
-            # Получаем текущую временную метку
-            timestamp = datetime.now().strftime("%H:%M:%S")
+            # Получаем (создаем) текущую временную метку
+            if not save_timestamp:
+                save_timestamp = datetime.now()
+                filename = save_timestamp.strftime("%H-%M-%S-") + f"{save_timestamp.microsecond // 1000:03d}"
+            timestamp = filename[:-4]
 
             # Увеличиваем счетчик кадров
             frame_count += 1
@@ -360,28 +364,36 @@ def main():
                         confidence=det['confidence']
                     ))
 
-
-            # --- ИНФОРМАЦИЯ О СОСТОЯНИИ ИГРЫ ---
+            # Выводим информацию о состоянии игры
             if game_pre_start and not game_finished:
                 # Выводим информацию о балансе элексира
                 balance = game_state.get_elixir_metrics()['balance']
                 negative = game_state.get_elixir_metrics()['negative']
                 stagnation = game_state.get_elixir_metrics()['stagnation']
-                print(f"Elix:  {balance:.1f}  -{negative:.1f}  +{stagnation:.1f}")
+                print(f"Elix:   {balance:.1f}  [-{negative:.1f}]  [+{stagnation:.1f}]")
+
                 # Выводим информацию о цикле карт
                 hand_cards = game_state.card_manager.get_hand_cards()
                 await_cards = game_state.card_manager.get_await_cards()
-
                 hand_names = [card.card_name if card.card_name else "???" for card in hand_cards]
                 await_names = [card.card_name if card.card_name else "???" for card in await_cards]
+                print(f"Cards:  [{', '.join(await_names)}] -> [{', '.join(hand_names)}]")
 
-                print(f"Away:  {', '.join(await_names)}")
-                print(f"Hand:  {', '.join(hand_names)}")
+                # Выводим информацию о таймерах и заклинаниях
+                timer_list_count = len(game_state.timer_list)
+                timer_list_obj = ', '.join([str(cnt_box_timer(timer_obj)) for timer_obj in game_state.timer_list])
+                spell_dict_hand = game_state.spell_dict_hand
+                spell_dict_our = game_state.spell_dict_our
+                spell_dict_enemy = game_state.spell_dict_enemy
+                print(f"Timer_list:  {timer_list_count} -> [{timer_list_obj}]")
+                print(f"Spell_hand:  {spell_dict_hand}")
+                print(f"Spell_our:   {spell_dict_our}")
+                print(f"Spell_enemy: {spell_dict_enemy}")
 
             elif not game_start_timer:
-                logger.info("Ожидание начала боя (_start)...")
+                logger.info("Ожидание начала боя (_ start)...")
             elif not game_pre_start:
-                logger.info("Ожидание старта игры (_timer_total)...")
+                logger.info("Ожидание старта игры (_ timer total)...")
 
             # --- 6.7: ОБНОВЛЕНИЕ OVERLAY ОКОН ---
             # Обновляем GUI overlay окон чтобы они оставались отзывчивыми (живыми)
@@ -391,21 +403,21 @@ def main():
                 overlay_dynamic.update()
 
             # --- 6.8: КОНТРОЛЬ ЧАСТОТЫ КАДРОВ ---
-            # Вычисляем время, затраченное на обработку
-            total_time = time.time() - start_time
-
-            # Вычисляем время каждого этапа
+            # Вычисляем время, затраченное на обработку каждого этапа
             frame_time = time_after_capture - start_time
             detection_time = time_after_detection - time_after_capture
             processing_time = time_after_processing - time_after_detection
             overlay_update_time = time_after_overlay_update - time_after_processing
+
             if DETECTION_TEST:
                 save_time = time_after_save - time_after_overlay_update
             else:
                 save_time = 0
 
-            print("Time:  общее = захват   детекция  обработка  overlay  сохранение")
-            print(f"Time:  {total_time:.3f} = {frame_time:.3f}  +  {detection_time:.3f}  +  {processing_time:.3f}  +  {overlay_update_time:.3f}  +  {save_time:.3f}")
+            total_time = time.time() - start_time
+
+            # print("Time:   total = capture   detect   algorithm   overlay   save")
+            # print(f"Time:   {total_time:.3f} =  {frame_time:.3f}  +  {detection_time:.3f}  +  {processing_time:.3f}  +  {overlay_update_time:.3f}  +  {save_time:.3f}")
             print()
 
 
