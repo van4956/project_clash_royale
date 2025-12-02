@@ -15,7 +15,7 @@ import os
 
 # ===== ПУТИ К ФАЙЛАМ И ПАПКАМ =====
 # Путь к папке с моделью YOLO
-MODEL_PATH = os.path.join("models", "train_clash_royale_test5", "weights", "best.pt")
+MODEL_PATH = os.path.join("models", "train_clash_royale2", "weights", "best.pt")
 # Путь к файлу для сохранения координат выбранной области экрана
 ROI_CONFIG_PATH = "roi_config.txt"
 
@@ -27,10 +27,10 @@ def get_roi_bounds():
 
     Returns:
         tuple: (x_min, y_min, x_max, y_max) - границы ROI области
-               или (0, 0, 1920, 1080) по умолчанию если файл не найден
+               (0, 0, 1920, 1080) - по умолчанию если файл не найден
 
     Формат файла: "top,left,width,height"
-    Пример: "100,1120,960,1700"
+    Пример:       "100,1120,960,1700"
     """
     try:
         if os.path.exists(ROI_CONFIG_PATH):
@@ -41,10 +41,15 @@ def get_roi_bounds():
                 width = int(coords[2])
                 height = int(coords[3])
 
-                x_min = left
-                y_min = top
-                x_max = left + width
-                y_max = top + height
+                # x_min = left
+                # y_min = top
+                # x_max = left + width
+                # y_max = top + height
+
+                x_min = 0
+                y_min = 0
+                x_max = width
+                y_max = height
 
                 return (x_min, y_min, x_max, y_max)
         else:
@@ -59,17 +64,17 @@ def get_roi_bounds():
 # FPS = 0.25 → 1 кадр в 4 секунды (для тестирования)
 # FPS = 0.5 → 1 кадр в 2 секунды (для тестирования)
 # FPS = 4.0 → 4 кадра в секунду (рабочий режим после тестирования)
-FPS = 3
+FPS = 4
 
 
 # ===== НАСТРОЙКИ ДЛЯ YOLO ДЕТЕКЦИИ =====
 YOLO_CONFIDENCE = 0.42  # Минимальный порог уверенности для детекции объектов
-YOLO_IMG_SIZE = 640  # Размер изображения для обработки моделью (ширина, высота)
+YOLO_IMG_SIZE = 544  # Размер изображения для обработки моделью (ширина, высота)
 YOLO_IOU = 0.85  # Минимальный порог IoU для фильтрации задвоенных детекций
 
 
 # ===== НАСТРОЙКИ ОТЛАДКИ/ТЕСТИРОВАНИЯ =====
-DETECTION_TEST = True  # True - сохранять кадры, False - не сохранять
+DETECTION_TEST = True     # True - сохранять кадры, False - не сохранять
 DETECTION_OUTPUT_DIR = "detection"  # Папка для сохранения обработанных кадров
 
 # Цвет рамки при выборе области экрана (BGR формат для OpenCV)
@@ -82,8 +87,6 @@ SELECTION_THICKNESS = 2
 # Сообщения для пользователя на русском языке
 
 MSG_STARTING_CAPTURE = "Запуск захвата экрана..."
-MSG_DETECTION_RESULT = "[{timestamp}] Обнаружено объектов: {count}"
-MSG_OBJECT_DETECTED = "(conf: {confidence:.2f}) - {class_name} "
 MSG_PRESS_Q_TO_QUIT = "Нажмите 'Ctrl+C' в терминале для остановки программы"
 
 
@@ -107,5 +110,5 @@ ELIXIR_BAR_OFFSET_RATIO = 0.2  # отступ от капельки в % от в
 CARD_SCALE = 0.2  # коэффициент масштабирования карт (калибруется визуально)
 
 # Логика подсчета эликсира
-ELIXIR_START_BALANCE = 6.5  # стартовый запас эликсира
-ELIXIR_SPEED = 0.35  # скорость прироста (эликсир/сек)
+ELIXIR_START_BALANCE = 7.5  # стартовый запас эликсира
+ELIXIR_SPEED = 0.38  # скорость прироста (эликсир/сек)

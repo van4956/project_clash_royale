@@ -1,6 +1,6 @@
 """
 Координатор всех обработчиков детекций.
-Главная функция process_detections вызывается из главного цикла app.py.
+Главная функция handler_processor вызывается из главного цикла app.py.
 Координирует работу timer_processor, spell_processor, ability_processor, evolution_processor.
 """
 import logging
@@ -19,14 +19,14 @@ from modules import ability_processor
 from modules import evolution_processor
 
 
-def process_detections(
+def handler_processor(
     all_detections: List[Dict[str, Any]],
     current_time: float,
     game_state: GameState,
     all_cards: List[Card]
 ) -> Dict[str, Any]:
     """
-    Главная функция координатор для обработки детекций текущего кадра.
+    Главная функция координатор для обработки детекций текущего кадра. Обновляет game_state и возвращает результаты обработки.
 
     Args:
         all_detections: список всех детекций текущего кадра
@@ -36,13 +36,13 @@ def process_detections(
 
     Returns:
         dict: результаты обработки {
-            'elixir_spent_timer': float,
-            'elixir_spent_spell': float,
-            'elixir_spent_ability': float,
-            'total_elixir_spent': float,
-        }
+                                        'elixir_spent_timer': float,
+                                        'elixir_spent_spell': float,
+                                        'elixir_spent_ability': float,
+                                        'total_elixir_spent': float,
+                                    }
 
-    Последовательность обработки:
+    Последовательность:
         1. Добавление кадра в log_screen
         2. Cleanup хвостов всех списков и словарей
         3. Обработка эволюционных маркеров (независимый процесс)
@@ -75,17 +75,17 @@ def process_detections(
         current_time
     )
 
-    # 4. Обработка красных таймеров (если есть _timer_red)
-    if _has_red_timers(all_detections):
-        elixir_spent_timer = timer_processor.process_timer_detections(
-            game_state.log_screen,
-            game_state.timer_list,
-            game_state.card_manager,
-            all_detections,
-            current_time,
-            game_state.evolution_dict_timer
-        )
-        results['elixir_spent_timer'] = elixir_spent_timer
+    # 4. Обработка красных таймеров (ВСЕГДА запускается для поддержки timer_obj)
+    # Даже если красных таймеров нет, нужно добавлять пустые timer_screen и проверять условия
+    elixir_spent_timer = timer_processor.process_timer_detections(
+        game_state.log_screen,
+        game_state.timer_list,
+        game_state.card_manager,
+        all_detections,
+        current_time,
+        game_state.evolution_dict_timer
+    )
+    results['elixir_spent_timer'] = elixir_spent_timer
 
     # 5. Обработка заклинаний (всегда запускается)
     elixir_spent_spell = spell_processor.process_spell_detections(
@@ -138,24 +138,4 @@ def _cleanup_all(game_state: GameState) -> None:
         - Остальные словари (our/enemy) очищаются по таймаутам внутри своих процессоров
     """
     # Cleanup timer_list
-    timer_processor.cleanup_timers(game_state.timer_list)
-
-    # Cleanup spell_dict_hand (скользящее окно) - УДАЛЕНО, вызывается в spell_processor.process_spell_detections()
-    # spell_processor.cleanup_spell_dict_hand(game_state.spell_dict_hand)
-
-
-def _has_red_timers(all_detections: List[Dict[str, Any]]) -> bool:
-    """
-    Проверяет наличие красных таймеров в детекциях.
-
-    Args:
-        all_detections: список всех детекций текущего кадра
-
-    Returns:
-        bool: True если есть хотя бы один _timer_red
-    """
-    for detection in all_detections:
-        class_name = detection.get('class_name', '')
-        if class_name == '_ timer red':
-            return True
-    return False
+    timer_processor.cleanup_timer_list(game_state.timer_list)

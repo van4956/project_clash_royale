@@ -8,7 +8,7 @@ import logging
 # Настраиваем конфигурацию логирования
 # WARNING - самое важное, для прода
 # INFO - подробный, для отладки
-logging.basicConfig(level=logging.WARNING, format='  -  [%(asctime)s] #%(levelname)-5s -  %(name)s:%(lineno)d  -  %(message)s')
+logging.basicConfig(level=logging.WARNING, format='[%(asctime)s] #%(levelname)-5s -  %(name)s:%(lineno)d  -  %(message)s')
 logger = logging.getLogger(__name__)
 
 import time
@@ -22,15 +22,13 @@ from modules.yolo_detector import YoloDetector  # Модуль детекции 
 from modules.overlay_static import StaticOverlay  # Статичные overlay элементы (доска, капелька)
 from modules.overlay_dynamic import DynamicOverlay  # Динамический overlay (шкала, цифра, карты)
 from modules.game_state import GameState  # Глобальное состояние игры
-from modules.detection_handler import process_detections  # Координатор обработки детекций
+from modules.handler_processor import handler_processor  # Координатор обработки детекций
 from modules.all_card import all_card  # Список всех карт для поиска атрибутов
 from modules.functions import cnt_box_timer  # Функция для подсчета количества таймеров
 
 # Импорт конфигурации
 from config import (
     FPS,                        # Частота обработки кадров
-    MSG_DETECTION_RESULT,       # Шаблон сообщения о результатах детекции
-    MSG_OBJECT_DETECTED,        # Шаблон сообщения об обнаруженном объекте
     DETECTION_TEST,             # Флаг сохранения кадров для отладки
     DETECTION_OUTPUT_DIR,       # Папка для сохранения кадров
     BOARD_WIDTH_PERCENT,        # Ширина доски
@@ -49,18 +47,18 @@ def main():
     """
     Главная функция приложения
 
-    Последовательность работы:
     1. Инициализация модулей (ScreenCapture, CardDetector)
     2. Выбор области экрана (ROI)
     3. Создание overlay элементов (статичные и динамические)
     4. Загрузка модели YOLO
-    5. Инициализация Game State
+    5. Инициализация GameState
     6. Основной цикл:
         - Захват кадра
         - Детекция YOLO
         - Проверка технических классов (_ start, _ timer total, _ finish)
-        - Обработка детекций через detection_handler
-        - Обновление overlay и вывод в терминал
+        - Обработка детекций через handler_
+        - Обновление overlay
+        - Вывод в терминал
     7. Очистка ресурсов при завершении
     """
 
@@ -69,7 +67,7 @@ def main():
     print("=" * 80)
 
 
-    # ===== ШАГ 1: ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
+    # ===== 1: ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ =====
     logger.info("Инициализация модулей...")
 
     # Создаем объект для захвата экрана
@@ -82,7 +80,7 @@ def main():
 
 
 
-    # ===== ШАГ 2: ВЫБОР ОБЛАСТИ ЭКРАНА =====
+    # ===== 2: ВЫБОР ОБЛАСТИ ЭКРАНА =====
     logger.info("Настройка области экрана...")
 
     # Пытаемся загрузить сохраненные координаты из файла
@@ -102,7 +100,7 @@ def main():
 
 
 
-    # ===== ШАГ 3: СОЗДАНИЕ OVERLAY ЭЛЕМЕНТОВ =====
+    # ===== 3: СОЗДАНИЕ OVERLAY ЭЛЕМЕНТОВ =====
     # Создание статичного overlay
     logger.info("Создание статичного overlay...")
 
@@ -146,7 +144,6 @@ def main():
     drop_height = overlay_static.height
 
     # --- ПАРАМЕТРЫ ДЛЯ ШКАЛЫ ---
-    # Высота, ширина
     bar_width = int(roi_width * ELIXIR_BAR_WIDTH_PERCENT)
     bar_height = int(drop_height * ELIXIR_BAR_HEIGHT_RATIO)
 
@@ -167,7 +164,7 @@ def main():
 
 
 
-    # ===== ШАГ 4: ЗАГРУЗКА МОДЕЛИ YOLO =====
+    # ===== 4: ЗАГРУЗКА МОДЕЛИ YOLO =====
     logger.info("Загрузка модели YOLO...")
 
     # Загружаем обученную модель
@@ -191,14 +188,14 @@ def main():
 
 
 
-    # ===== ШАГ 5: ИНИЦИАЛИЗАЦИЯ GAME STATE =====
+    # ===== 5: ИНИЦИАЛИЗАЦИЯ GAME STATE =====
     logger.info("Инициализация Game State...")
     game_state = GameState()
     logger.info("Game State инициализирован ✓ ")
 
 
 
-    # ===== ШАГ 6: ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ =====
+    # ===== 6: ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ =====
     print("=" * 80)
     print("Запуск захвата экрана...")
     print(f"Частота обработки: {FPS} кадров/сек")
@@ -212,10 +209,9 @@ def main():
     frame_count = 0
 
     # Флаги инициализации игры
-    game_pre_start = True  # Флаг предстартового ожидания (ожидаем _ start)
-    game_start_timer = True      # Флаг начала игры (ожидаем _ timer total)
-    game_finished = False      # Флаг конца игры (ожидаем _ finish)
-    game_reset = False      # Флаг сброса игры
+    game_pre_start = False        # Флаг предстартового ожидания (_ start)
+    game_start_timer = False      # Флаг начала игры (_ timer total)
+    game_finished = False         # Флаг конца игры (_ finish)
 
     try:
         while True:
@@ -245,32 +241,24 @@ def main():
 
             # --- 6.3: ОБРАБОТКА ТЕХНИЧЕСКИХ КЛАССОВ ---
 
-            game_start_timer = True # TODO: удалить после тестирования
-            game_pre_start = True # TODO: удалить после тестирования
-            # game_state.card_manager.reset() # TODO: удалить после тестирования
-            game_state.game_start_time = current_time # TODO: удалить после тестирования
-
-
-            # YOLO модель пока еще не научена детектить '_ start'
             # Проверка на начало боя (_ start) - подготовка колоды
-            # if not game_start_timer:
-            #     for det in detections:
-            #         if det['class_name'] == '_ start':
-            #             print("\nОбнаружен _ start - подготовка колоды противника")
-            #             game_state.card_manager.reset()
-            #             game_start_timer = True
-            #             break
+            if not game_start_timer:
+                for det in detections:
+                    if det['class_name'] == '_ start':
+                        print("Обнаружен _ start - подготовка колоды противника\n")
+                        game_state.card_manager.reset()
+                        game_start_timer = True
+                        break
 
             # Проверка на первый таймер (_ timer total) - старт игрового режима
-            # if game_start_timer and not game_pre_start:
-            #     for det in detections:
-            #         if det['class_name'] == '_timer_red':
-            #             print("Обнаружен первый _ timer total - старт игрового режима\n")
-            #             game_state.card_manager.reset() # TODO: удалить после тестирования
-            #             game_state.game_start_time = current_time
-            #             game_state.time_screen = current_time
-            #             game_pre_start = True
-            #             break
+            if game_start_timer and not game_pre_start:
+                for det in detections:
+                    if det['class_name'] == '_ timer total':
+                        print("Обнаружен первый _ timer total - старт игрового режима\n")
+                        game_state.game_start_time = current_time
+                        game_state.time_screen = current_time
+                        game_pre_start = True
+                        break
 
             # Проверка на конец боя (_ finish)
             game_finished = False
@@ -279,20 +267,15 @@ def main():
                     game_finished = True
                     break
 
-
             # --- 6.4: ОБРАБОТКА ДЕТЕКЦИЙ (если игра началась) ---
             if game_pre_start and not game_finished:
 
-                # --- 6.4.1: КООРДИНАТОР ОБРАБОТКИ ДЕТЕКЦИЙ ---
-                results = process_detections(
-                    all_detections=detections,
-                    current_time=current_time,
-                    game_state=game_state,
-                    all_cards=all_card
-                )
+                # Запускаем ГЛАВНЫЙ ОБРАБОТЧИК ДЕТЕКЦИЙ
+                # В нем происходит обработка детекций и обновление game_state
+                handler_processor(detections, current_time, game_state, all_card)
                 time_after_processing = time.time()
 
-                # --- 6.3.2: ОБНОВЛЕНИЕ ДИНАМИЧЕСКОГО OVERLAY (шкала + цифра + карты) ---
+                # ОБНОВЛЕНИЕ ДИНАМИЧЕСКОГО OVERLAY (шкала + цифра + карты)
                 if overlay_dynamic:
                     # Обновляем эликсир
                     overlay_dynamic.update_display(game_state.elixir_balance)
@@ -304,32 +287,30 @@ def main():
                     overlay_dynamic.set_hand_cards(hand_cards)
 
                 time_after_overlay_update = time.time()
+
             else:
                 # Если игра не началась, устанавливаем метки времени равными предыдущей
                 time_after_processing = time_after_detection
                 time_after_overlay_update = time_after_detection
 
-            # --- 6.4: ОБРАБОТКА КОНЦА ИГРЫ ---
+            # --- 6.5: ОБРАБОТКА КОНЦА ИГРЫ ---
             if game_finished and game_pre_start:
-                logger.info("КОНЕЦ БОЯ")
-                logger.info("Эликсир ушедший в минус: %s", game_state.elixir_negative)
-                logger.info("Простаиваемый эликсир:   %s", game_state.elixir_stagnation)
 
                 # Сброс состояния игры
                 game_state.reset()
                 game_start_timer = False
                 game_pre_start = False
 
+            save_timestamp = datetime.now()
+            timestamp = save_timestamp.strftime("%H-%M-%S-") + f"{save_timestamp.microsecond // 1000:03d}"
 
-
-            # --- 6.5: СОХРАНЕНИЕ КАДРА С ДЕТЕКЦИЯМИ (если включен режим отладки) ---
+            # --- 6.6: СОХРАНЕНИЕ ОБРАБОТАННОГО КАДРА С ДЕТЕКЦИЯМИ (если включен режим отладки) ---
             if DETECTION_TEST:
                 # Рисуем детекции на кадре (боксы, названия, confidence)
                 frame_with_detections = detector.draw_detections(frame, detections)
 
                 # Генерируем имя файла по текущему времени (HH-MM-SS-ms.png)
-                save_timestamp = datetime.now()
-                filename = save_timestamp.strftime("%H-%M-%S-") + f"{save_timestamp.microsecond // 1000:03d}.png"
+                filename = timestamp + ".png"
                 filepath = os.path.join(DETECTION_OUTPUT_DIR, filename)
 
                 # Сохраняем изображение
@@ -338,57 +319,50 @@ def main():
             else:
                 time_after_save = time_after_overlay_update
 
-
-
-            # --- 6.6: ВЫВОД РЕЗУЛЬТАТОВ В ТЕРМИНАЛ ---
-            # Получаем (создаем) текущую временную метку
-            if not save_timestamp:
-                save_timestamp = datetime.now()
-                filename = save_timestamp.strftime("%H-%M-%S-") + f"{save_timestamp.microsecond // 1000:03d}"
-            timestamp = filename[:-4]
-
+            # --- 6.7: ВЫВОД В ТЕРМИНАЛ ---
             # Увеличиваем счетчик кадров
             frame_count += 1
 
             # Выводим заголовок с количеством обнаруженных объектов
-            print(MSG_DETECTION_RESULT.format(
-                timestamp=timestamp,
-                count=len(detections)
-            ))
+            count = len(detections)
+            print(f"[{timestamp}] Обнаружено объектов: {count}")
 
             # Выводим детальную информацию о каждом обнаруженном объекте
-            if len(detections) > 0:
-                for det in detections:
-                    print(MSG_OBJECT_DETECTED.format(
-                        class_name=det['class_name'],
-                        confidence=det['confidence']
-                    ))
+            # if len(detections) > 0:
+            #     for det in detections:
+            #         print(f"(conf: {round(det['confidence'], 2)}) - {det['class_name']} ")
 
             # Выводим информацию о состоянии игры
             if game_pre_start and not game_finished:
                 # Выводим информацию о балансе элексира
-                balance = game_state.get_elixir_metrics()['balance']
-                negative = game_state.get_elixir_metrics()['negative']
-                stagnation = game_state.get_elixir_metrics()['stagnation']
-                print(f"Elix:   {balance:.1f}  [-{negative:.1f}]  [+{stagnation:.1f}]")
+                # balance = game_state.get_elixir_metrics()['balance']
+                # negative = game_state.get_elixir_metrics()['negative']
+                # stagnation = game_state.get_elixir_metrics()['stagnation']
+                # print(f"Elix:   {balance:.1f}  [-{negative:.1f}]  [+{stagnation:.1f}]")
 
                 # Выводим информацию о цикле карт
                 hand_cards = game_state.card_manager.get_hand_cards()
                 await_cards = game_state.card_manager.get_await_cards()
-                hand_names = [card.card_name if card.card_name else "???" for card in hand_cards]
-                await_names = [card.card_name if card.card_name else "???" for card in await_cards]
+                hand_names = [str(card.card_id) if card.card_id else "???" for card in hand_cards]
+                await_names = [str(card.card_id) if card.card_id else "???" for card in await_cards]
                 print(f"Cards:  [{', '.join(await_names)}] -> [{', '.join(hand_names)}]")
 
-                # Выводим информацию о таймерах и заклинаниях
+                # Выводим информацию о таймерах
                 timer_list_count = len(game_state.timer_list)
-                timer_list_obj = ', '.join([str(cnt_box_timer(timer_obj)) for timer_obj in game_state.timer_list])
-                spell_dict_hand = game_state.spell_dict_hand
-                spell_dict_our = game_state.spell_dict_our
-                spell_dict_enemy = game_state.spell_dict_enemy
-                print(f"Timer_list:  {timer_list_count} -> [{timer_list_obj}]")
-                print(f"Spell_hand:  {spell_dict_hand}")
-                print(f"Spell_our:   {spell_dict_our}")
-                print(f"Spell_enemy: {spell_dict_enemy}")
+                # timer_list_obj = ', '.join([str(cnt_box_timer(timer_obj)) for timer_obj in game_state.timer_list])
+                # print(f"t_list:  {timer_list_count} -> [{timer_list_obj}]")
+                for timer_obj in game_state.timer_list:
+                    print("--------------------------------------------------------------------------------")
+                    timer_obj.print_all_screens()
+                    print(f"cnt_timer_screen {len(timer_obj)}  cnt_box_timer: {cnt_box_timer(timer_obj)} list_ignore: {timer_obj.list_ignore} status: {timer_obj.status} -----------")
+
+                # Выводим информацию о заклинаниях
+                # spell_dict_hand = game_state.spell_dict_hand
+                # spell_dict_our = game_state.spell_dict_our
+                # spell_dict_enemy = game_state.spell_dict_enemy
+                # print(f"Spell_hand:  {spell_dict_hand}")
+                # print(f"Spell_our:   {spell_dict_our}")
+                # print(f"Spell_enemy: {spell_dict_enemy}")
 
             elif not game_start_timer:
                 logger.info("Ожидание начала боя (_ start)...")
@@ -416,10 +390,9 @@ def main():
 
             total_time = time.time() - start_time
 
-            # print("Time:   total = capture   detect   algorithm   overlay   save")
-            # print(f"Time:   {total_time:.3f} =  {frame_time:.3f}  +  {detection_time:.3f}  +  {processing_time:.3f}  +  {overlay_update_time:.3f}  +  {save_time:.3f}")
+            print("Time:   total = capture   detect   algorithm   overlay   save")
+            print(f"        {total_time:.3f} =  {frame_time:.3f}  +  {detection_time:.3f}  +  {processing_time:.3f}  +  {overlay_update_time:.3f}  +  {save_time:.3f}")
             print()
-
 
             # Вычисляем время ожидания до следующего кадра
             sleep_time = frame_interval - total_time

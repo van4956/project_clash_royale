@@ -344,7 +344,6 @@ class DynamicOverlay:
             await_pos, hand_pos = self._calculate_card_positions()
             self.await_card_positions = await_pos
             self.hand_card_positions = hand_pos
-            logger.info("Координаты карт заново рассчитаны")
 
         # Удаляем старые изображения с canvas
         for card_id in self.await_card_ids:

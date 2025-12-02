@@ -10,19 +10,24 @@ class TimerObject(list):
                                [timer_screen],[timer_screen],[timer_screen]]
     Создаем дополнительные атрибуты: first_screen, last_screen, list_ignore
     '''
-    first_screen: int | None = None # время первой детекции box_timer
-    last_screen: int | None = None # время последней детекции box_timer
+    time_first_screen: int | None = None # время первой детекции box_timer
+    time_last_screen: int | None = None # время последней детекции box_timer
     list_ignore: list[int] | None = None # список class_name которые игнорировать
+    status: str = "active" # статус timer_obj (error_1, active, done, bomb, bad)
 
-    def del_last(self):
-        '''Удаляет последний элемент из timer_obj (списка)        '''
+    def del_last_screen(self):
+        '''Удаляет последний timer_screen из timer_obj'''
         if len(self) > 0:
             self.pop()
 
-    def add_full(self, timer_screen: list):
-        '''Добавляет элемент спереди'''
-        self.insert(0, [timer_screen])
+    def add_first_screen(self, timer_screen: list):
+        '''Добавляет новый timer_screen спереди'''
+        self.insert(0, timer_screen)
 
+    def print_all_screens(self):
+        '''Выводит все timer_screen в timer_obj'''
+        for timer_screen in self:
+            print(timer_screen)
 
 
 @dataclass

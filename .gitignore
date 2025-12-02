@@ -38,25 +38,26 @@ env/
 # Конфигурационные файлы проекта
 roi_config.txt  # Координаты области экрана (персональные настройки)
 
-# Отладочные данные
-detection/  # Сохраненные кадры с детекциями (для отладки)
+# Сохраненные кадры с детекциями (для отладки)
+detection/
 
-# Модели (если большие файлы)
-# models/*.pt
+# Модели
+models/
 
 # Временные файлы
 *.log
 *.tmp
 
-# Тестовые данные (если не нужны в репозитории)
-# data_test/
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Models
-models/
+# Кэш
+.pytest_cache/
 
+prompt_config.sh
+prompt_config.txt
+docs.txt
 log_devoloping.md
 algoritm.txt
+подсказка.txt
